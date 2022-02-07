@@ -1,9 +1,10 @@
 package raft
 
 import (
-	//"fmt"
+
 	//"log"
 	//"math/rand"
+	"fmt"
 	"log"
 	"net"
 	"net/rpc"
@@ -45,7 +46,7 @@ func CreateServer(serverId int, peerIds []int /*,storage*/ /*,ready <-chan inter
 	return s
 }
 
-func (s *Server) connectionAccept() {
+func (s *Server) ConnectionAccept() {
 	defer s.wg.Done()
 
 	for {
@@ -80,21 +81,17 @@ func (s *Server) Serve() {
 
 	s.wg.Add(1)
 
-	go s.connectionAccept()
-}
-
-func (s *Server) disconnectPeer(peerId int) {
-	if s.peerClients[peerId] != nil {
-		s.peerClients[peerId].Close()
-		s.peerClients[peerId] = nil
-	}
+	go s.ConnectionAccept()
 }
 
 func (s *Server) DisconnectAll() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for id := range s.peerClients {
-		s.disconnectPeer(id)
+		if s.peerClients[id] != nil {
+			s.peerClients[id].Close()
+			s.peerClients[id] = nil
+		}
 	}
 }
 
@@ -103,4 +100,47 @@ func (s *Server) Shutdown() {
 	//close(s.quit)
 	s.listener.Close()
 	s.wg.Wait()
+}
+
+func (s *Server) GetListenerAddr() net.Addr {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.listener.Addr()
+}
+
+func (s *Server) ConnectToPeer(peerId int, addr net.Addr) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.peerClients[peerId] == nil {
+		peer, err := rpc.Dial(addr.Network(), addr.String())
+		if err != nil {
+			return err
+		}
+		s.peerClients[peerId] = peer
+	}
+	return nil
+}
+
+func (s *Server) DisconnectPeer(peerId int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	peer := s.peerClients[peerId]
+	if peer != nil {
+		err := peer.Close()
+		s.peerClients[peerId] = nil
+		return err
+	}
+	return nil
+}
+
+func (s *Server) RPC(peerId int, rpcCall string, args interface{}, reply interface{}) error {
+	s.mu.Lock()
+	peer := s.peerClients[peerId]
+	s.mu.Unlock()
+
+	if peer == nil {
+		return fmt.Errorf("RPC call to peer %d after it is closed", peerId)
+	} else {
+		return peer.Call(rpcCall, args, reply)
+	}
 }
