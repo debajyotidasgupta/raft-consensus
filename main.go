@@ -48,6 +48,7 @@ func main() {
 			fmt.Println("Shutting")
 			s.DisconnectAll()
 			s.Shutdown()
+			fmt.Println("Ended")
 			return
 		} else {
 			addr := Addr{"tcp", "[::]:" + ports[peerId]}

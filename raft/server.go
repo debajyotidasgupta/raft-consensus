@@ -54,12 +54,12 @@ func (s *Server) ConnectionAccept() {
 	defer s.wg.Done()
 
 	for {
-		listener, err := s.listener.Accept()
 		fmt.Printf("%d Accepting\n", s.serverId)
+		listener, err := s.listener.Accept()
 		if err != nil {
 			select {
 			case <-s.quit:
-				fmt.Println("Quit")
+				fmt.Println("No more accepting connections")
 				return
 			default:
 				log.Fatal("accept error:", err)
@@ -88,7 +88,6 @@ func (s *Server) Serve(port string) {
 		log.Fatal(err)
 	}
 	log.Printf("[%v] listening at %s", s.serverId, s.listener.Addr())
-	fmt.Println(s.listener.Addr().Network(), s.listener.Addr().String())
 	s.mu.Unlock()
 
 	s.wg.Add(1)
@@ -111,7 +110,9 @@ func (s *Server) Shutdown() {
 	//s.cm.Stop()
 	close(s.quit)
 	s.listener.Close()
+	fmt.Println("Waiting for existing connections to close")
 	s.wg.Wait()
+	fmt.Println("All connections closed")
 }
 
 func (s *Server) GetListenerAddr() net.Addr {
