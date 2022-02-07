@@ -14,6 +14,8 @@ import (
 	//"time"
 )
 
+type ServiceType int
+
 // Server wraps a CM and RPC SERVER
 type Server struct {
 	mu sync.Mutex
@@ -32,8 +34,10 @@ type Server struct {
 	peerClients map[int]*rpc.Client
 
 	//ready <-chan interface{}
-	//quit  chan interface{}
-	wg sync.WaitGroup
+	quit chan interface{}
+	wg   sync.WaitGroup
+
+	service *ServiceType
 }
 
 func CreateServer(serverId int, peerIds []int /*,storage*/ /*,ready <-chan interface{}*/ /*commitChan*/) *Server {
@@ -42,7 +46,7 @@ func CreateServer(serverId int, peerIds []int /*,storage*/ /*,ready <-chan inter
 	s.peerIds = peerIds
 	s.peerClients = make(map[int]*rpc.Client)
 	//server.ready = ready
-	//server.quit = make(chan interface{})
+	s.quit = make(chan interface{})
 	return s
 }
 
@@ -51,9 +55,15 @@ func (s *Server) ConnectionAccept() {
 
 	for {
 		listener, err := s.listener.Accept()
+		fmt.Printf("%d Accepting\n", s.serverId)
 		if err != nil {
-			//quit case
-			log.Fatal("accept error:", err)
+			select {
+			case <-s.quit:
+				fmt.Println("Quit")
+				return
+			default:
+				log.Fatal("accept error:", err)
+			}
 		}
 		s.wg.Add(1)
 		go func() {
@@ -63,20 +73,22 @@ func (s *Server) ConnectionAccept() {
 	}
 }
 
-func (s *Server) Serve() {
+func (s *Server) Serve(port string) {
 	s.mu.Lock()
 	//s.cm = NewConsensusModule(......)
+	s.service = new(ServiceType)
 
 	s.rpcServer = rpc.NewServer()
 	//rpcProxy
-	//s.rpcServer.RegisterName("RaftModule",s.rpcProxy)
+	s.rpcServer.RegisterName("ServiceType", s.service)
 
 	var err error
-	s.listener, err = net.Listen("tcp", "0")
+	s.listener, err = net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("[%v] listening at %s", s.serverId, s.listener.Addr())
+	fmt.Println(s.listener.Addr().Network(), s.listener.Addr().String())
 	s.mu.Unlock()
 
 	s.wg.Add(1)
@@ -97,7 +109,7 @@ func (s *Server) DisconnectAll() {
 
 func (s *Server) Shutdown() {
 	//s.cm.Stop()
-	//close(s.quit)
+	close(s.quit)
 	s.listener.Close()
 	s.wg.Wait()
 }
@@ -143,4 +155,10 @@ func (s *Server) RPC(peerId int, rpcCall string, args interface{}, reply interfa
 	} else {
 		return peer.Call(rpcCall, args, reply)
 	}
+}
+
+func (s *ServiceType) DisplayMsg(args int, reply *int) error {
+	fmt.Println(args)
+	*reply = 2 * args
+	return nil
 }
