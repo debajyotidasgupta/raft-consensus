@@ -47,7 +47,7 @@ func main() {
 		if peerId == serverId || peerId < 1 || peerId > 3 {
 			fmt.Println("Shutting")
 			s.DisconnectAll()
-			s.Shutdown()
+			s.Stop()
 			fmt.Println("Ended")
 			return
 		} else {
