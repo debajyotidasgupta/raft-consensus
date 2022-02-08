@@ -91,5 +91,6 @@ func TestServerClient(t *testing.T) {
 		wg.Add(1)
 		go communicate(i, numPeers, servers[i-1])
 	}
+
 	wg.Wait()
 }
