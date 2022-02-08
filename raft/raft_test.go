@@ -1,9 +1,9 @@
 package raft
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -29,7 +29,7 @@ var ports map[int]string = map[int]string{}
 func communicate(serverId int, numPeers int, s *Server) {
 	defer wg.Done()
 	for {
-		peerId := rand.Intn(numPeers)
+		peerId := rand.Intn(numPeers) + 1
 		pause := rand.Intn(50)
 		pauseTime := pause * int(time.Millisecond)
 		time.Sleep(time.Duration(pauseTime))
@@ -57,13 +57,13 @@ func communicate(serverId int, numPeers int, s *Server) {
 	}
 }
 
+// Change the numPeers to test with different number of peers
 func TestServerClient(t *testing.T) {
-	var numPeers int = 3
-	//fmt.Scanf("%d", &numPeers)
+	var numPeers int = 5
 	var port = 20000
 
 	for i := 1; i <= numPeers; i++ {
-		portStr := fmt.Sprintf("%d", port)
+		portStr := strconv.Itoa(port)
 		ports[i] = portStr
 		port++
 	}
@@ -71,13 +71,18 @@ func TestServerClient(t *testing.T) {
 	var servers []*Server
 
 	for i := 1; i <= numPeers; i++ {
-		peerIds := []int{}
-		for peerId := 1; peerId <= numPeers; i++ {
+		peerIds := make([]int, numPeers-1)
+		j := 0
+		for peerId := 1; peerId <= numPeers; peerId++ {
 			if peerId != i {
-				peerIds = append(peerIds, peerId)
+				peerIds[j] = peerId
+				j++
 			}
 		}
 		s := CreateServer(i, peerIds)
+		if s == nil {
+			t.Errorf("ERROR: server could not be created")
+		}
 		servers = append(servers, s)
 		s.Serve(ports[i])
 	}

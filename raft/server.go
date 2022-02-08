@@ -32,7 +32,7 @@ type Server struct {
 
 //create a Server Instance with serverId and list of peerIds
 func CreateServer(serverId int, peerIds []int /*,storage*/ /*,ready <-chan interface{}*/ /*commitChan*/) *Server {
-	s := &Server{}
+	s := new(Server)
 	s.serverId = serverId
 	s.peerIds = peerIds
 	s.peers = make(map[int]*rpc.Client)
@@ -47,15 +47,15 @@ func (s *Server) ConnectionAccept() {
 	defer s.wg.Done()
 
 	for {
-		fmt.Printf("%d Listening\n", s.serverId)
+		fmt.Printf("[%d] Listening\n", s.serverId)
 		listener, err := s.listener.Accept() // wait to accept an incoming connection
 		if err != nil {
 			select {
 			case <-s.quit: // quit listening
-				fmt.Println("No more accepting connections")
+				fmt.Printf("[%d] Accepting no more connections\n", s.serverId)
 				return
 			default:
-				log.Fatal("accept error:", err)
+				log.Fatalf("[%d] Error in accepting %v\n", s.serverId, err)
 			}
 		}
 		s.wg.Add(1) // serve the new accepted connection in a separate go routine
@@ -75,8 +75,8 @@ func (s *Server) Serve(port string) {
 	s.mu.Lock()
 
 	s.service = new(ServiceType) //create a new service for which RPC is to be served
-	dummy := ServiceType(1)
-	s.service = &dummy
+	//dummy := ServiceType(1)
+	//s.service = &dummy
 	s.rpcServer = rpc.NewServer() //create a new RPC Server for the new service
 
 	s.rpcServer.RegisterName("ServiceType", s.service) //register the new service
@@ -86,7 +86,7 @@ func (s *Server) Serve(port string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("[%v] listening at %s", s.serverId, s.listener.Addr())
+	log.Printf("[%v] listening at %s\n", s.serverId, s.listener.Addr())
 	s.mu.Unlock()
 
 	s.wg.Add(1)
@@ -112,10 +112,10 @@ func (s *Server) Stop() {
 	close(s.quit)      // indicate the listener to stop listening
 	s.listener.Close() // close the listener
 
-	fmt.Println("Waiting for existing connections to close")
+	fmt.Printf("[%d] Waiting for existing connections to close\n", s.serverId)
 	s.wg.Wait() // wait for all existing connections to close
 
-	fmt.Println("All connections closed")
+	fmt.Printf("[%d] All connections closed. Stopping server\n", s.serverId)
 }
 
 func (s *Server) GetListenerAddr() net.Addr {
@@ -159,7 +159,7 @@ func (s *Server) RPC(peerId int, rpcCall string, args interface{}, reply interfa
 	s.mu.Unlock()
 
 	if peer == nil {
-		return fmt.Errorf("RPC call to peer %d after it is closed", peerId)
+		return fmt.Errorf("[%d] RPC call to peer %d after it is closed", s.serverId, peerId)
 	} else {
 		// call RPC corresponding to the particular peer connection
 		return peer.Call(rpcCall, args, reply)
@@ -168,7 +168,7 @@ func (s *Server) RPC(peerId int, rpcCall string, args interface{}, reply interfa
 
 //A DUMMY RPC FUNCTION
 func (s *ServiceType) DisplayMsg(args int, reply *int) error {
-	fmt.Println(args)
+	fmt.Printf("received %d\n", args)
 	*reply = 2 * args
 	return nil
 }
