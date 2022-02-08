@@ -24,7 +24,7 @@ type CommitEntry struct {
 }
 
 type LogEntry struct {
-	Cmd  interface{}
+	Command  interface{}
 	Term uint64 // Term is the term of the log entry
 }
 
@@ -126,7 +126,7 @@ func (rn *RaftNode) sendCommit() {
 		// Send the entries to the commit channel one by one.
 		for i, entry := range entries {
 			rn.commitChan <- CommitEntry{
-				Command: entry.Cmd,
+				Command: entry.Command,
 				Index:   savedLastApplied + uint64(i) + 1,
 				Term:    savedTerm,
 			}
