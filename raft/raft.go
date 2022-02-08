@@ -1,12 +1,15 @@
 package raft
 
 import (
+	"fmt"
+	"log"
 	"sync"
 	"time"
 )
 
 type RNState int // RNState is the state of the Raft node
 
+const DEBUG = 1 // DEBUG is the debug level
 const (
 	Follower  RNState = iota // Follower is the state of a Raft node that is a follower
 	Candidate                // Candidate is the state of a Raft node that is a candidate
@@ -21,8 +24,8 @@ type CommitEntry struct {
 }
 
 type LogEntry struct {
-	Command interface{}
-	Term    uint64 // Term is the term of the log entry
+	Cmd  interface{}
+	Term uint64 // Term is the term of the log entry
 }
 
 type RaftNode struct {
@@ -53,9 +56,13 @@ type RaftNode struct {
 	matchIndex map[uint64]uint64 // MatchIndex is the index of the highest log entry known to be replicated on the leader's peers
 }
 
-// NewRaftNode creates a new Raft node.
+// NewRaftNode  creates  a  new  Raft  node  with the given id, peers,
+// server, database, and commit channel. The ready  channel is used to
+// notify the caller that the peers have been initialized and the Raft
+// node is ready to be started.
+
 func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready chan interface{}, commitChan chan CommitEntry) *RaftNode {
-	newRaftNode := &RaftNode{
+	node := &RaftNode{
 		id:                 id,
 		peers:              peers,
 		server:             server,
@@ -77,12 +84,55 @@ func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready 
 	// Start the Raft node
 	go func() {
 		<-ready
-		newRaftNode.mu.Lock()
-		defer newRaftNode.mu.Unlock()
-		newRaftNode.electionResetEvent = time.Now()
+		node.mu.Lock()
+		defer node.mu.Unlock()
+		node.electionResetEvent = time.Now()
 	}()
 
-	return newRaftNode
+	go node.sendCommit()
+	return node
+}
+
+// debug logs a debug message if the debug level is set to DEBUG
+func (rn *RaftNode) debug(format string, args ...interface{}) {
+	if DEBUG > 0 {
+		format = fmt.Sprintf("[%d] %s", rn.id, format)
+		log.Printf(format, args...)
+	}
+}
+
+// sendCommit  sends  committed  entries on commit channel.  It watches
+// newCommitReady  for  notifications  and calculates which new entries
+// are ready to be sent. This method should run in background goroutine
+// Commit Channel  of  Node may be buffered and will limit how fast the
+// client consumes new committed entries.
+
+func (rn *RaftNode) sendCommit() {
+	for range rn.newCommitReady {
+		// Find which entries we have to apply.
+		rn.mu.Lock()
+		savedTerm := rn.currentTerm
+		savedLastApplied := rn.lastApplied
+
+		// Find the slice of entry that we have not applied yet.
+		var entries []LogEntry
+		if rn.commitIndex > rn.lastApplied {
+			entries = rn.log[rn.lastApplied+1 : rn.commitIndex+1]
+			rn.lastApplied = rn.commitIndex
+		}
+		rn.mu.Unlock()
+		rn.debug("sendCommit entries=%v, savedLastApplied=%d", entries, savedLastApplied)
+
+		// Send the entries to the commit channel one by one.
+		for i, entry := range entries {
+			rn.commitChan <- CommitEntry{
+				Command: entry.Cmd,
+				Index:   savedLastApplied + uint64(i) + 1,
+				Term:    savedTerm,
+			}
+		}
+	}
+	rn.debug("sendCommit completed")
 }
 
 func (s RNState) String() string { // String returns the string representation of a Raft node state
