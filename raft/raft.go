@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"sync"
@@ -70,6 +71,29 @@ type RequestVoteArgs struct {
 type RequestVoteReply struct {
 	Term        uint64 // Term is the term of the Raft node
 	VoteGranted bool   // VoteGranted is true if the Raft node granted the vote
+}
+
+type AppendEntriesArgs struct {
+	Term     uint64 // Term is the term of the Raft node
+	LeaderId uint64 // LeaderId is the id of the Raft node that is sending the AppendEntries RPC
+
+	PrevLogIndex uint64     // PrevLogIndex is the index of the log entry immediately preceding the new ones
+	PrevLogTerm  uint64     // PrevLogTerm is the term of the log entry immediately preceding the new ones
+	Entries      []LogEntry // Entries is the slice of log entries to be appended
+	LeaderCommit uint64     // LeaderCommit is the index of the log entry to be committed
+}
+
+type AppendEntriesReply struct {
+	Term    uint64 // Term is the term of the Raft node
+	Success bool   // true if follower contained entry matching prevLogIndex and prevLogTerm
+
+	// Faster conflict resolution optimization
+	// (described  near the end of section 5.3
+	// in the  https://raft.github.io/raft.pdf
+	// [RAFT] paper)
+
+	ConflictIndex uint64 // ConflictIndex is the index of the conflicting log entry
+	ConflictTerm  uint64 // ConflictTerm is the term of the conflicting log entry
 }
 
 // debug logs a debug message if the debug level is set to DEBUG
@@ -270,7 +294,7 @@ func (rn *RaftNode) startElection() {
 			rn.debug("Sending RequestVote to %d: %+v", peer, args)
 
 			var reply RequestVoteReply // Reply from the server
-			if err := rn.server.RPC(peer, "ConsensusModule.RequestVote", args, &reply); err == nil {
+			if err := rn.server.RPC(peer, "RaftNode.RequestVote", args, &reply); err == nil {
 				rn.mu.Lock()         // Lock the Raft Node
 				defer rn.mu.Unlock() // Unlock the Raft Node
 				rn.debug("received RequestVoteReply %+v", reply)
@@ -375,7 +399,128 @@ func (rn *RaftNode) becomeLeader() {
 	}(50 * time.Millisecond)
 }
 
-func (cm *ConsensusModule) leaderSendAEs() {}
+// leaderSendAEs sends AppendEntries RPCs to all peers
+// in the cluster, collects responses, and updates the
+// state  of  the Raft Node accordingly. This function
+// expects  the  mutex  of  the Raft Node to be locked
+
+func (rn *RaftNode) leaderSendAEs() {
+	rn.mu.Lock()                       // Lock the mutex
+	savedCurrentTerm := rn.currentTerm // Save the current term
+	rn.mu.Unlock()                     // Unlock the mutex
+
+	for _, peer := range rn.peers {
+
+		// The following goroutine is used to send AppendEntries RPCs
+		// to one peer  in  the  cluster  and  collect  responses  to
+		// determine and update the current state  of  the  Raft Node
+
+		go func(peer uint64) {
+			rn.mu.Lock()                    //	Lock the mutex
+			nextIndex := rn.nextIndex[peer] //	Get the next index for this peer
+			prevLogIndex := nextIndex - 1   //	Get the previous log index for this peer
+			prevLogTerm := uint64(0)        //	Get the previous log term for this peer
+
+			if prevLogIndex > 0 {
+				//	If the previous log index is greater than 0, get the previous log term from the log
+				prevLogTerm = rn.log[prevLogIndex-1].Term
+			}
+			entries := rn.log[nextIndex-1:] //	Get the entries for this peer
+
+			args := AppendEntriesArgs{
+				Term:         savedCurrentTerm, //	Get the current term
+				LeaderId:     rn.id,            //	Get the id of the leader
+				PrevLogIndex: prevLogIndex,     //	Get the previous log index
+				PrevLogTerm:  prevLogTerm,      //	Get the previous log term
+				Entries:      entries,          //	Get the entries
+				LeaderCommit: rn.commitIndex,   //	Get the leader commit index
+			}
+
+			rn.mu.Unlock() //	Unlock the mutex before sending the RPC
+			rn.debug("sending AppendEntries to %v: ni=%d, args=%+v", peer, nextIndex, args)
+
+			var reply AppendEntriesReply
+			if err := rn.server.RPC(peer, "RaftNode.AppendEntries", args, &reply); err == nil {
+				rn.mu.Lock()                       //	Lock the mutex before updating the state
+				defer rn.mu.Unlock()               //	Unlock the mutex after updating the state
+				if reply.Term > savedCurrentTerm { //	If the reply term is greater than the current term, update the current term
+
+					rn.debug("Term out of date in heartbeat reply")
+					rn.becomeFollower(reply.Term) //	Update the state to follower since the term is out of date
+					return
+				}
+
+				if rn.state == Leader && savedCurrentTerm == reply.Term { //	If we are still a leader and the term is the same, update the next index and match index
+					if reply.Success { // If follower contained entry matching prevLogIndex and prevLogTerm
+						rn.nextIndex[peer] = nextIndex + uint64(len(entries)) //	Update the next index
+						rn.matchIndex[peer] = rn.nextIndex[peer] - 1          //	Update the match index
+
+						savedCommitIndex := rn.commitIndex //	Save the current commit index
+						for i := rn.commitIndex + 1; i <= uint64(len(rn.log)); i++ {
+							if rn.log[i-1].Term == rn.currentTerm { //	If the term is the same as the current term, update the commit index
+								matchCount := 1 //	Initialize the match count to single match
+
+								for _, peer := range rn.peers {
+									if rn.matchIndex[peer] >= i {
+
+										// If  the  match  index  is greater than or equal
+										// to the current index, increment the match count
+										matchCount++
+									}
+								}
+								if matchCount*2 > len(rn.peers)+1 {
+
+									// If the match count is greater than the
+									// number of peers plus 1,  that  is  got
+									// the majority,  update the commit index
+									rn.commitIndex = i
+								}
+							}
+						}
+						rn.debug("AppendEntries reply from %d success: nextIndex := %v, matchIndex := %v; commitIndex := %d", peer, rn.nextIndex, rn.matchIndex, rn.commitIndex)
+
+						if rn.commitIndex != savedCommitIndex {
+							rn.debug("Leader sets commitIndex := %d", rn.commitIndex)
+							// Commit index changed:  the  leader considers new  entries
+							// to be committed. Send  new  entries on the commit channel
+							// to this leader's clients, and notify followers by sending
+							// them Append Entries.
+
+							rn.newCommitReady <- struct{}{}
+							rn.trigger <- struct{}{}
+						}
+					} else {
+						// Success is false: follower contained conflicting entry
+
+						if reply.ConflictTerm > 0 {
+							lastIndexOfTerm := uint64(0) //	Initialize the last index of the term to 0
+							for i := uint64(len(rn.log)); i > 0; i-- {
+								if rn.log[i-1].Term == reply.ConflictTerm {
+									// If the term is the same as the conflict term, update the last index of the term
+									lastIndexOfTerm = i
+									break
+								}
+							}
+							if lastIndexOfTerm > 0 {
+								// If there are entries after the conflicting entry in the log
+								// update the next index to the index of the last entry in the
+								rn.nextIndex[peer] = lastIndexOfTerm + 1
+							} else {
+								// If there are no entries after the conflicting entry in the log
+								// update the next index to the index  of the  conflicting  entry
+								rn.nextIndex[peer] = reply.ConflictIndex
+							}
+						} else {
+							// Success is false and conflict term is 0: follower contained conflicting entry
+							rn.nextIndex[peer] = reply.ConflictIndex
+						}
+						rn.debug("AppendEntries reply from %d !success: nextIndex := %d", peer, nextIndex-1)
+					}
+				}
+			}
+		}(peer)
+	}
+}
 
 // lastLogIndexAndTerm  returns the index  of the last
 // log and the last log entry's term (or 0  if there's
@@ -396,6 +541,124 @@ func (rn *RaftNode) lastLogIndexAndTerm() (uint64, uint64) {
 		return 0, 0
 
 	}
+}
+
+// AppendEntries  is  the  RPC  handler  for  AppendEntries
+// RPCs. This function is used to send entries to followers
+// This function expects the  Node's  mutex  to  be  locked
+
+func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply) error {
+	rn.mu.Lock()          // Lock the mutex before updating the state
+	defer rn.mu.Unlock()  // Unlock the mutex after updating the state
+	if rn.state == Dead { // If the node is dead, return false
+		return nil //	Return no error
+	}
+	rn.debug("AppendEntries: %+v", args)
+
+	if args.Term > rn.currentTerm { // If the term is greater than the current term, update the current term
+		rn.debug("Term out of date in AppendEntries")
+		rn.becomeFollower(args.Term) //	Update the state to follower since the term is out of date
+	}
+
+	reply.Success = false //	Initialize the reply to false
+	if args.Term == rn.currentTerm {
+		if rn.state != Follower {
+
+			// Raft guarantees that only a single leader exists  in
+			// any given term. If we  carefully follow the logic of
+			// RequestVote and the code in startElection that sends
+			// RVs, we'll see that two leaders can't exist  in  the
+			// cluster  with  the  same  term.  This  condition  is
+			// important for candidates that find out that  another
+			// peer won the election for this term.
+
+			rn.becomeFollower(args.Term) //	Update the state to follower since it received an AE from a leader
+		}
+		rn.electionResetEvent = time.Now() //	Reset the election timer
+
+		// Does  our log contain an entry at  PrevLogIndex whose
+		// term  matches PrevLogTerm? Note  that in the  extreme
+		// case of PrevLogIndex=0 (empty) this is vacuously true
+
+		if args.PrevLogIndex == 0 ||
+			(args.PrevLogIndex <= uint64(len(rn.log)) && args.PrevLogTerm == rn.log[args.PrevLogIndex-1].Term) {
+			reply.Success = true
+
+			// Find an insertion point - where there's a term mismatch between
+			// the existing log starting at PrevLogIndex+1 and the new entries
+			// sent in the RPC.
+
+			logInsertIndex := args.PrevLogIndex + 1
+			newEntriesIndex := uint64(1)
+
+			for {
+				if logInsertIndex > uint64(len(rn.log)) || newEntriesIndex > uint64(len(args.Entries)) {
+					break
+				}
+				if rn.log[logInsertIndex-1].Term != args.Entries[newEntriesIndex-1].Term {
+					break
+				}
+				logInsertIndex++
+				newEntriesIndex++
+			}
+
+			/**
+			* At the end of this  loop  (considering  1  based
+			* indexing), the following will hold:
+			*
+			* [-] logInsertIndex points at the  end of the log
+			*     or an index where the term  mismatches  with
+			*     an entry from the leader
+			*
+			* [-] newEntriesIndex points at the end of Entries
+			*     or an index where the term  mismatches  with
+			*     the corresponding log entry
+			 */
+
+			if newEntriesIndex <= uint64(len(args.Entries)) {
+				// If the newEntriesIndex is less than the length of the entries, append the entries
+				rn.debug("Inserting entries %v from index %d", args.Entries[newEntriesIndex-1:], logInsertIndex)
+				rn.log = append(rn.log[:logInsertIndex-1], args.Entries[newEntriesIndex-1:]...) //	Insert the new entries
+				rn.debug("Log is now: %v", rn.log)
+			}
+
+			// Set commit index, if the leader's commit index is greater than the length of the log, set it to the length of the log
+			if args.LeaderCommit > rn.commitIndex {
+				rn.commitIndex = uint64(math.Min(float64(args.LeaderCommit), float64(len(rn.log)))) //	Update the commit index
+				rn.debug("Setting commitIndex=%d", rn.commitIndex)
+				rn.newCommitReady <- struct{}{} //	Signal that a new commit index is ready
+			}
+		} else {
+			// No match for PrevLogIndex or PrevLogTerm. Populate
+			// ConflictIndex or ConflictTerm to help  the  leader
+			// bring us up to date quickly. Success is  false  in
+			// this case.
+
+			if args.PrevLogIndex > uint64(len(rn.log)) {
+				reply.ConflictIndex = uint64(len(rn.log)) + 1 //	If the PrevLogIndex is greater than the length of the log, set the conflict index to the length of the log
+				reply.ConflictTerm = 0                        //	Set the conflict term to 0
+			} else {
+				// PrevLogIndex points within our log
+				// but  PrevLogTerm  does  not  match
+				// rn.log[PrevLogIndex-1].
+
+				reply.ConflictTerm = rn.log[args.PrevLogIndex-1].Term
+
+				var cfi uint64
+				for cfi = args.PrevLogIndex - 1; cfi > 0; cfi-- {
+					if rn.log[cfi-1].Term != reply.ConflictTerm {
+						break //	Break out of the loop when the term mismatches
+					}
+				}
+				reply.ConflictIndex = cfi + 1 //	Set the conflict index to the index of the first entry with a with the same term as the conflict term
+			}
+		}
+	}
+
+	reply.Term = rn.currentTerm //	Set the term in the reply to the current term
+	rn.persistToStorage()       //	Persist the state to storage
+	rn.debug("AppendEntries reply: %+v", *reply)
+	return nil //	Return no error
 }
 
 // RequestVote Remote Procedure Call is invoked by  candidates
@@ -512,11 +775,36 @@ func (rn *RaftNode) restoreFromStorage() {
 
 		} else {
 
-			// If the data is not found in the database, initialize it
-			log.Fatal("No data found for %s", data.name)
+			// If the data is not found in the database
+			log.Fatal("No data found for", data.name)
 
 		}
 	}
+}
+
+// Submit submits a new command from the client to  the RaftNode.  This
+// function doesn't block; clients read the commit  channel  passed  in
+// the constructor to be notified of new committed entries. It  returns
+// true iff this Raft Node is the leader - in which case the command is
+// accepted.  If  false  is  returned,  the  client will have to find a
+// different RaftNode to submit this command to.
+
+func (rn *RaftNode) Submit(command interface{}) bool {
+	rn.mu.Lock() // Lock the mutex
+	rn.debug("Submit received by %v: %v", rn.state, command)
+
+	// Process the command only if the node is a leader
+	if rn.state == Leader {
+		rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
+		rn.persistToStorage()                                                     // Persist the log to storage
+		rn.debug("log=%v", rn.log)                                                // Debug the log state
+		rn.mu.Unlock()                                                            // Unlock the mutex before returning
+		rn.trigger <- struct{}{}                                                  // Trigger the event for append entries
+		return true                                                               // Return true since we are the leader
+	}
+
+	rn.mu.Unlock() // Unlock the mutex
+	return false
 }
 
 // String returns a string representation of the Raft node state.
