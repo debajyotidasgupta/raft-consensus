@@ -135,25 +135,25 @@ func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready 
 func (rn *RaftNode) sendCommit() {
 	for range rn.newCommitReady {
 		// Find which entries we have to apply.
-		rn.mu.Lock()
-		savedTerm := rn.currentTerm
-		savedLastApplied := rn.lastApplied
+		rn.mu.Lock()                       // Lock the Raft node
+		savedTerm := rn.currentTerm        // Save the current term
+		savedLastApplied := rn.lastApplied // Save the last applied index
 
 		// Find the slice of entry that we have not applied yet.
-		var entries []LogEntry
-		if rn.commitIndex > rn.lastApplied {
-			entries = rn.log[rn.lastApplied+1 : rn.commitIndex+1]
-			rn.lastApplied = rn.commitIndex
+		var entries []LogEntry               // Entries is the slice of log entries that we have not applied yet
+		if rn.commitIndex > rn.lastApplied { // If the commit index is greater than the last applied index
+			entries = rn.log[rn.lastApplied+1 : rn.commitIndex+1] // Entries is the slice of log entries that we have not applied yet
+			rn.lastApplied = rn.commitIndex                       // Update the last applied index
 		}
-		rn.mu.Unlock()
+		rn.mu.Unlock() // Unlock the Raft node
 		rn.debug("sendCommit entries=%v, savedLastApplied=%d", entries, savedLastApplied)
 
 		// Send the entries to the commit channel one by one.
-		for i, entry := range entries {
-			rn.commitChan <- CommitEntry{
-				Command: entry.Command,
-				Index:   savedLastApplied + uint64(i) + 1,
-				Term:    savedTerm,
+		for i, entry := range entries { // For each entry in the slice of log entries that we have not applied yet
+			rn.commitChan <- CommitEntry{ // Send the entry to the commit channel
+				Command: entry.Command,                    // Command is the command of the log entry
+				Index:   savedLastApplied + uint64(i) + 1, // Index is the index of the log entry
+				Term:    savedTerm,                        // Term is the term of the log entry
 			}
 		}
 	}
@@ -271,8 +271,8 @@ func (rn *RaftNode) startElection() {
 
 			var reply RequestVoteReply // Reply from the server
 			if err := rn.server.RPC(peer, "ConsensusModule.RequestVote", args, &reply); err == nil {
-				rn.mu.Lock()
-				defer rn.mu.Unlock()
+				rn.mu.Lock()         // Lock the Raft Node
+				defer rn.mu.Unlock() // Unlock the Raft Node
 				rn.debug("received RequestVoteReply %+v", reply)
 
 				if rn.state != Candidate { // If we are no longer a candidate, bail out
@@ -423,6 +423,12 @@ func (rn *RaftNode) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) e
 		rn.becomeFollower(args.Term)
 	}
 
+	/**
+	 * If the candidate's log is at least as up-to-date as
+	 * our last log entry, and the candidate's term is  at
+	 * least as recent as ours, then we can grant the vote
+	 */
+
 	if rn.currentTerm == args.Term &&
 		(rn.votedFor == 0 || rn.votedFor == args.CandidateId) &&
 		(args.LastLogTerm > lastLogTerm || (args.LastLogTerm == lastLogTerm && args.LastLogIndex >= lastLogIndex)) {
@@ -442,10 +448,10 @@ func (rn *RaftNode) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) e
 		reply.VoteGranted = false
 
 	}
-	reply.Term = rn.currentTerm
-	rn.persistToStorage()
+	reply.Term = rn.currentTerm // Set the term to the current term
+	rn.persistToStorage()       // Persist the state to storage
 	rn.debug("RequestVote reply: %+v", reply)
-	return nil
+	return nil // Return nil error
 }
 
 // becomeFollower makes the current RaftNode  a
