@@ -8,20 +8,20 @@ import (
 	"sync"
 )
 
-type ServiceType int
+type ServiceType uint64
 
 // Server wraps a RPC Server
 // It will also wrap Raft service object
 type Server struct {
-	mu        sync.Mutex          // mutual exclusion for accessing server members
-	serverId  int                 // id of this server
-	peerIds   []int               // peerIds that this server will connect as a client
-	rpcServer *rpc.Server         // RPC Server
-	listener  net.Listener        // listener to keep listening for incoming connections
-	peers     map[int]*rpc.Client // maps peerId to corresponding peer
-	quit      chan interface{}    // channel to indicate to stop listening for incoming connections
-	wg        sync.WaitGroup      // waitgroup to wait for all connections to close before gracefully stopping
-	service   *ServiceType        // DUMMY RPC SERVICE FOR TEST ONLY
+	mu        sync.Mutex             // mutual exclusion for accessing server members
+	serverId  uint64                 // id of this server
+	peerIds   []uint64               // peerIds that this server will connect as a client
+	rpcServer *rpc.Server            // RPC Server
+	listener  net.Listener           // listener to keep listening for incoming connections
+	peers     map[uint64]*rpc.Client // maps peerId to corresponding peer
+	quit      chan interface{}       // channel to indicate to stop listening for incoming connections
+	wg        sync.WaitGroup         // waitgroup to wait for all connections to close before gracefully stopping
+	service   *ServiceType           // DUMMY RPC SERVICE FOR TEST ONLY
 
 	// cm *ConsensusModule
 	// storage Storage
@@ -31,11 +31,11 @@ type Server struct {
 }
 
 //create a Server Instance with serverId and list of peerIds
-func CreateServer(serverId int, peerIds []int /*,storage*/ /*,ready <-chan interface{}*/ /*commitChan*/) *Server {
+func CreateServer(serverId uint64, peerIds []uint64 /*,storage*/ /*,ready <-chan interface{}*/ /*commitChan*/) *Server {
 	s := new(Server)
 	s.serverId = serverId
 	s.peerIds = peerIds
-	s.peers = make(map[int]*rpc.Client)
+	s.peers = make(map[uint64]*rpc.Client)
 	//server.ready = ready
 	s.quit = make(chan interface{})
 	return s
@@ -125,7 +125,7 @@ func (s *Server) GetListenerAddr() net.Addr {
 }
 
 //connect to a peer
-func (s *Server) ConnectToPeer(peerId int, addr net.Addr) error {
+func (s *Server) ConnectToPeer(peerId uint64, addr net.Addr) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	// if not already connected to the peer
@@ -140,7 +140,7 @@ func (s *Server) ConnectToPeer(peerId int, addr net.Addr) error {
 }
 
 //disconnect from a particular peer
-func (s *Server) DisconnectPeer(peerId int) error {
+func (s *Server) DisconnectPeer(peerId uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	peer := s.peers[peerId]
@@ -153,7 +153,7 @@ func (s *Server) DisconnectPeer(peerId int) error {
 }
 
 //make an RPC call to the particular peer
-func (s *Server) RPC(peerId int, rpcCall string, args interface{}, reply interface{}) error {
+func (s *Server) RPC(peerId uint64, rpcCall string, args interface{}, reply interface{}) error {
 	s.mu.Lock()
 	peer := s.peers[peerId] //obtain the peer client
 	s.mu.Unlock()
@@ -167,7 +167,7 @@ func (s *Server) RPC(peerId int, rpcCall string, args interface{}, reply interfa
 }
 
 //A DUMMY RPC FUNCTION
-func (s *ServiceType) DisplayMsg(args int, reply *int) error {
+func (s *ServiceType) DisplayMsg(args uint64, reply *uint64) error {
 	fmt.Printf("received %d\n", args)
 	*reply = 2 * args
 	return nil
