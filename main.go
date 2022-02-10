@@ -5,7 +5,7 @@ import (
 	"raft-consensus/raft"
 )
 
-var ports = map[int]string{
+var ports = map[uint64]string{
 	1: "20000",
 	2: "21000",
 	3: "22000",
@@ -25,11 +25,11 @@ func (a Addr) String() string {
 }
 
 func main() {
-	var serverId int
+	var serverId uint64
 	fmt.Scanf("%d", &serverId)
 
-	peerIds := []int{}
-	for i := 1; i <= 3; i++ {
+	peerIds := []uint64{}
+	for i := uint64(1); i <= 3; i++ {
 		if i != serverId {
 			peerIds = append(peerIds, i)
 		}
@@ -42,7 +42,7 @@ func main() {
 	s.Serve(ports[serverId])
 
 	for {
-		var peerId, msg int
+		var peerId, msg uint64
 		fmt.Scanf("%d %d", &peerId, &msg)
 		if peerId == serverId || peerId < 1 || peerId > 3 {
 			fmt.Println("Shutting")

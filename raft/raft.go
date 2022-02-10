@@ -402,7 +402,7 @@ func (rn *RaftNode) becomeLeader() {
 // leaderSendAEs sends AppendEntries RPCs to all peers
 // in the cluster, collects responses, and updates the
 // state  of  the Raft Node accordingly. This function
-// expects  the  mutex  of  the Raft Node to be locked
+// expects  the  mutex  of  the Raft Node to be locked - ??????????????????????????
 
 func (rn *RaftNode) leaderSendAEs() {
 	rn.mu.Lock()                       // Lock the mutex
