@@ -21,22 +21,27 @@ type Server struct {
 	peers     map[uint64]*rpc.Client // maps peerId to corresponding peer
 	quit      chan interface{}       // channel to indicate to stop listening for incoming connections
 	wg        sync.WaitGroup         // waitgroup to wait for all connections to close before gracefully stopping
-	service   *ServiceType           // DUMMY RPC SERVICE FOR TEST ONLY
 
-	// cm *ConsensusModule
-	// storage Storage
-	// rpcProxy *RPCProxy
-	// commitChan chan<- CommmitEntry
-	//ready <-chan interface{}
+	rn         *RaftNode
+	db         *Database
+	rpcProxy   *RPCProxy
+	commitChan chan CommitEntry
+	ready      <-chan interface{}
+}
+
+type RPCProxy struct {
+	rn *RaftNode
 }
 
 //create a Server Instance with serverId and list of peerIds
-func CreateServer(serverId uint64, peerIds []uint64 /*,storage*/ /*,ready <-chan interface{}*/ /*commitChan*/) *Server {
+func CreateServer(serverId uint64, peerIds []uint64, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *Server {
 	s := new(Server)
 	s.serverId = serverId
 	s.peerIds = peerIds
 	s.peers = make(map[uint64]*rpc.Client)
-	//server.ready = ready
+	s.db = db
+	s.ready = ready
+	s.commitChan = commitChan
 	s.quit = make(chan interface{})
 	return s
 }
@@ -71,18 +76,16 @@ func (s *Server) ConnectionAccept() {
 //2. register the service with RPC
 //3. get a lister for TCP port passed as argument
 //4. start listening for incoming connections
-func (s *Server) Serve(port string) {
+func (s *Server) Serve() {
 	s.mu.Lock()
+	s.rn = NewRaftNode(s.serverId, s.peerIds, s, s.db, s.ready, s.commitChan)
 
-	s.service = new(ServiceType) //create a new service for which RPC is to be served
-	//dummy := ServiceType(1)
-	//s.service = &dummy
 	s.rpcServer = rpc.NewServer() //create a new RPC Server for the new service
-
-	s.rpcServer.RegisterName("ServiceType", s.service) //register the new service
+	s.rpcProxy = &RPCProxy{rn: s.rn}
+	s.rpcServer.RegisterName("RaftNode", s.rpcProxy) //register the new service
 
 	var err error
-	s.listener, err = net.Listen("tcp", ":"+port) //get a listener to the tcp port
+	s.listener, err = net.Listen("tcp", ":0") //get a listener to the tcp port
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,7 +94,26 @@ func (s *Server) Serve(port string) {
 
 	s.wg.Add(1)
 
-	go s.ConnectionAccept() //start listening for incoming connections
+	go func() {
+		defer s.wg.Done()
+
+		for {
+			conn, err := s.listener.Accept()
+			if err != nil {
+				select {
+				case <-s.quit:
+					return
+				default:
+					log.Fatal("accept error: ", err)
+				}
+			}
+			s.wg.Add(1)
+			go func() {
+				s.rpcServer.ServeConn(conn)
+				s.wg.Done()
+			}()
+		}
+	}()
 }
 
 //close connections to all peers
@@ -108,7 +130,7 @@ func (s *Server) DisconnectAll() {
 
 //stop the server
 func (s *Server) Stop() {
-	//s.cm.Stop()
+	s.rn.Stop()
 	close(s.quit)      // indicate the listener to stop listening
 	s.listener.Close() // close the listener
 

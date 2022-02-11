@@ -109,7 +109,7 @@ func (rn *RaftNode) debug(format string, args ...interface{}) {
 // notify the caller that the peers have been initialized and the Raft
 // node is ready to be started.
 
-func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready chan interface{}, commitChan chan CommitEntry) *RaftNode {
+func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *RaftNode {
 	node := &RaftNode{
 		id:                 id,                      // id is the id of the Raft node
 		peers:              peers,                   // Peer is the list of peers in the Raft cluster
