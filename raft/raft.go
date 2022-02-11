@@ -401,8 +401,7 @@ func (rn *RaftNode) becomeLeader() {
 
 // leaderSendAEs sends AppendEntries RPCs to all peers
 // in the cluster, collects responses, and updates the
-// state  of  the Raft Node accordingly. This function
-// expects  the  mutex  of  the Raft Node to be locked - ??????????????????????????
+// state  of  the Raft Node accordingly.
 
 func (rn *RaftNode) leaderSendAEs() {
 	rn.mu.Lock()                       // Lock the mutex
@@ -805,6 +804,20 @@ func (rn *RaftNode) Submit(command interface{}) bool {
 
 	rn.mu.Unlock() // Unlock the mutex
 	return false
+}
+
+// Stop stops this RaftNode, cleaning up  its  state.  This  method
+// returns quickly, but it may take a bit of time (up  to  election
+// timeout) for all goroutines to exit and fully free its resources
+
+func (rn *RaftNode) Stop() {
+	rn.mu.Lock()         // Lock the mutex
+	defer rn.mu.Unlock() // Unlock the mutex
+
+	// Update the state to stopped
+	rn.state = Dead          // Set the state to dead
+	rn.debug("Becomes Dead") // Debug the state
+	close(rn.newCommitReady) // Close the channel
 }
 
 // String returns a string representation of the Raft node state.
