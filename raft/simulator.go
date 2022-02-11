@@ -36,6 +36,8 @@ type ClusterSimulator struct {
 
 // Create a new ClusterSimulator
 func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
+	// initialising required fields of ClusterSimulator
+
 	serverList := make([]*Server, n)
 	isConnected := make([]bool, n)
 	isAlive := make([]bool, n)
@@ -44,11 +46,12 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	ready := make(chan interface{})
 	storage := make([]*Database, n)
 
-	// Creating servers
+	// creating servers
 
 	for i := uint64(0); i < n; i++ {
 		peerIds := make([]uint64, 0)
 
+		// get PeerIDs for server i
 		for j := uint64(0); j < n; j++ {
 			if i == j {
 				continue
@@ -78,6 +81,7 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 
 	close(ready)
 
+	// create a new cluster
 	newCluster := &ClusterSimulator{
 		raftCluster: serverList,
 		dbCluster:   storage,
@@ -96,6 +100,7 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	return newCluster
 }
 
+// Shut down all servers in the cluster
 func (nc *ClusterSimulator) Shutdown() {
 	for i := uint64(0); i < nc.n; i++ {
 		nc.raftCluster[i].DisconnectAll()
@@ -114,6 +119,7 @@ func (nc *ClusterSimulator) Shutdown() {
 	}
 }
 
+// Reads channel and adds all received entries to the corresponding commits
 func (nc *ClusterSimulator) collectCommits(i uint64) {
 	for commit := range nc.commitChans[i] {
 		nc.mu.Lock()
@@ -123,6 +129,7 @@ func (nc *ClusterSimulator) collectCommits(i uint64) {
 	}
 }
 
+// Disconnect a server from other servers
 func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 	logtest("Disconnect %d", id)
 
@@ -137,6 +144,7 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 	nc.isConnected[id] = false
 }
 
+// Reconnect a server to other servers
 func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 	logtest("Reconnect %d", id)
 
@@ -156,6 +164,7 @@ func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 	nc.isConnected[id] = true
 }
 
+// Crash a server and shut it down
 func (nc *ClusterSimulator) CrashPeer(id uint64) {
 	logtest("Crash %d", id)
 
@@ -168,6 +177,7 @@ func (nc *ClusterSimulator) CrashPeer(id uint64) {
 	nc.mu.Unlock()
 }
 
+// Restart a server and reconnect to other peers
 func (nc *ClusterSimulator) RestartPeer(id uint64) {
 	if nc.isAlive[id] {
 		log.Fatalf("Id %d alive in restart peer", id)
@@ -193,6 +203,47 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) {
 	close(ready)
 	nc.isAlive[id] = true
 	time.Sleep(time.Duration(20) * time.Millisecond)
+}
+
+// Ensure only a single leader
+func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
+	for r := 0; r < 8; r++ {
+		leaderId := -1
+		leaderTerm := -1
+
+		for i := uint64(0); i < nc.n; i++ {
+			if nc.isConnected[i] {
+				_, term, isLeader := nc.raftCluster[i].rn.Report()
+				if isLeader {
+					if leaderId < 0 {
+						leaderId = int(i)
+						leaderTerm = term
+					} else {
+						nc.t.Fatalf("2 ids: %d, %d think they are leaders", leaderId, i)
+					}
+				}
+			}
+		}
+		if leaderId >= 0 {
+			return leaderId, leaderTerm
+		}
+		time.Sleep(150 * time.Millisecond)
+	}
+
+	nc.t.Fatalf("no leader found")
+	return -1, -1
+}
+
+// check if there are no leaders
+func (nc *ClusterSimulator) CheckNoLeader() {
+
+	for i := uint64(0); i < nc.n; i++ {
+		if nc.isConnected[i] {
+			if _, _, isLeader := nc.raftCluster[i].rn.Report(); isLeader {
+				nc.t.Fatalf("%d is Leader, expected no leader", i)
+			}
+		}
+	}
 }
 
 func logtest(logstr string, a ...interface{}) {

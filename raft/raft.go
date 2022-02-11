@@ -835,3 +835,10 @@ func (s RNState) String() string { // String returns the string representation o
 		panic("Error: Unknown state")
 	}
 }
+
+func (rn *RaftNode) Report() (id int, term int, isLeader bool) {
+	rn.mu.Lock()
+	defer rn.mu.Unlock()
+	isLeader = rn.state == Leader
+	return int(rn.id), int(rn.currentTerm), isLeader
+}
