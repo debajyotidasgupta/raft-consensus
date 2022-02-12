@@ -300,3 +300,28 @@ func TestElectionDisconnectReconnectLoop(t *testing.T) {
 		return
 	}
 }
+
+func TestElectionFollowerDisconnectReconnectAfterLong(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+
+	follower := (initialLeader + 1) % 3
+	cs.DisconnectPeer(uint64(follower))
+
+	time.Sleep(1200 * time.Millisecond)
+
+	cs.ReconnectPeer(uint64(follower))
+
+	time.Sleep(300 * time.Millisecond)
+	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+	}
+
+	t.Logf("new leader=%d old leader=%d\n", newLeader, initialLeader)
+}
