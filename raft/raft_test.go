@@ -233,3 +233,24 @@ func TestElectionLeaderDisconnectAndReconnect5Nodes(t *testing.T) {
 		t.Errorf("latest leader term expected to be %d got %d", newLeaderTerm, latestLeaderTerm)
 	}
 }
+
+func TestElectionFollowerDisconnectAndReconnect(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	follower := (initialLeader + 1) % 3
+	cs.DisconnectPeer(uint64(follower))
+
+	time.Sleep(300 * time.Millisecond)
+
+	cs.ReconnectPeer(uint64(follower))
+	time.Sleep(100 * time.Millisecond)
+	_, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+	}
+}
