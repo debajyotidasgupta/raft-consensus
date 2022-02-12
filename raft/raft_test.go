@@ -316,12 +316,14 @@ func TestElectionFollowerDisconnectReconnectAfterLong(t *testing.T) {
 
 	cs.ReconnectPeer(uint64(follower))
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
 
 	if newLeaderTerm <= initialLeaderTerm {
 		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
 	}
 
-	t.Logf("new leader=%d old leader=%d\n", newLeader, initialLeader)
+	if newLeader != follower {
+		t.Errorf("new leader expected to be %d, got %d", follower, newLeader)
+	}
 }
