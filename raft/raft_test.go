@@ -349,3 +349,221 @@ func TestCommitOneCommand(t *testing.T) {
 		t.Errorf("Not committed by 3 nodes")
 	}
 }
+
+func TestTryCommitToNonLeader(t *testing.T) {
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	leaderId, _ := cs.CheckUniqueLeader()
+	servingId := (leaderId + 1) % 3
+	logtest("submitting 42 to %d", servingId)
+	isLeader := cs.SubmitToServer(servingId, 42)
+	if isLeader {
+		t.Errorf("want id=%d to be non leader, but it is", servingId)
+	}
+	time.Sleep(time.Duration(20) * time.Millisecond)
+}
+
+func TestCommitThenLeaderDisconnect(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+
+	logtest("submitting 42 to %d", origLeaderId)
+	isLeader := cs.SubmitToServer(origLeaderId, 42)
+	if !isLeader {
+		t.Errorf("want id=%d leader, but it's not", origLeaderId)
+	}
+
+	time.Sleep(time.Duration(250) * time.Millisecond)
+
+	cs.DisconnectPeer(uint64(origLeaderId))
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	num, _ := cs.CheckCommitted(42)
+	logtest("committed by %d nodes", num)
+
+}
+
+func TestCommitMultipleCommands(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+
+	values := []int{42, 55, 81}
+	for _, v := range values {
+		logtest("submitting %d to %d", v, origLeaderId)
+		isLeader := cs.SubmitToServer(origLeaderId, v)
+		if !isLeader {
+			t.Errorf("want id=%d leader, but it's not", origLeaderId)
+		}
+		time.Sleep(time.Duration(100) * time.Millisecond)
+	}
+
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	com1, i1 := cs.CheckCommitted(42)
+	com2, i2 := cs.CheckCommitted(55)
+	com3, i3 := cs.CheckCommitted(81)
+
+	if com1 != 3 || com2 != 3 || com3 != 3 {
+		t.Errorf("expected com1 = com2 = com3 = 3 found com1 = %d com2 = %d com3 = %d", com1, com2, com3)
+	}
+
+	if i1 != 1 || i2 != 2 || i3 != 3 {
+		t.Errorf("expected i1 = 1 i2 = 2 i3 = 3 found i1 = %d i2 = %d i3 = %d", i1, i2, i3)
+	}
+}
+
+func TestCommitWithDisconnectionAndRecover(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	// Submit a couple of values to a fully connected cluster.
+	origLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(origLeaderId, 5)
+	cs.SubmitToServer(origLeaderId, 6)
+
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	num, _ := cs.CheckCommitted(6)
+	if num != 3 {
+		t.Errorf("expected 3 commits found = %d", num)
+	}
+
+	dPeerId := (origLeaderId + 1) % 3
+	cs.DisconnectPeer(uint64(dPeerId))
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	// Submit a new command; it will be committed but only to two servers.
+	cs.SubmitToServer(origLeaderId, 7)
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	num, _ = cs.CheckCommitted(7)
+	if num != 2 {
+		t.Errorf("expected 2 commits found = %d", num)
+	}
+	// Now reconnect dPeerId and wait a bit; it should find the new command too.
+	cs.ReconnectPeer(uint64(dPeerId))
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	num, _ = cs.CheckCommitted(7)
+	if num != 3 {
+		t.Errorf("expected 3 commits found = %d", num)
+	}
+}
+
+func TestTryCommitMajorityFailure(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(origLeaderId, 5)
+
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	num, _ := cs.CheckCommitted(5)
+
+	if num != 3 {
+		t.Errorf("expected 3 commits found = %d", num)
+	}
+
+	dPeer1 := (origLeaderId + 1) % 3
+	dPeer2 := (origLeaderId + 2) % 3
+
+	cs.DisconnectPeer(uint64(dPeer1))
+	cs.DisconnectPeer(uint64(dPeer2))
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	cs.SubmitToServer(origLeaderId, 6)
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	numC, _ := cs.CheckCommitted(6)
+
+	if numC != 0 {
+		t.Errorf("expected 0 commits found = %d", numC)
+	}
+
+	cs.ReconnectPeer(uint64(dPeer1))
+	cs.ReconnectPeer(uint64(dPeer2))
+	time.Sleep(time.Duration(600) * time.Millisecond)
+
+	newLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(newLeaderId, 8)
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	numF, _ := cs.CheckCommitted(8)
+	if numF != 3 {
+		t.Errorf("expected 3 commits found = %d", numF)
+	}
+
+}
+
+func TestTryCommitToDCLeader(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(origLeaderId, 5)
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	cs.DisconnectPeer(uint64(origLeaderId))
+	time.Sleep(time.Duration(200) * time.Millisecond)
+	cs.SubmitToServer(origLeaderId, 6)
+	time.Sleep(time.Duration(200) * time.Millisecond)
+
+	num1, _ := cs.CheckCommitted(6)
+	if num1 != 0 {
+		t.Errorf("expected 0 commits found = %d", num1)
+	}
+
+	newLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(newLeaderId, 7)
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	num2, _ := cs.CheckCommitted(7)
+
+	if num2 != 4 {
+		t.Errorf("expected 4 commits found = %d", num2)
+	}
+
+	cs.ReconnectPeer(uint64(origLeaderId))
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	newLeaderId, _ = cs.CheckUniqueLeader()
+	cs.SubmitToServer(newLeaderId, 8)
+	time.Sleep(time.Duration(300) * time.Millisecond)
+	num3, _ := cs.CheckCommitted(7)
+	num4, _ := cs.CheckCommitted(8)
+	num5, _ := cs.CheckCommitted(6)
+	if num3 != 5 || num4 != 5 || num5 != 0 {
+		t.Errorf("expected num3 = num4 = 5 and num5 = 0 found num3= %d num4 = %d num5 = %d", num3, num4, num5)
+	}
+}
+
+func TestTryCommitLeaderDisconnectsShortTime(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+	cs.DisconnectPeer(uint64(origLeaderId))
+	cs.SubmitToServer(origLeaderId, 5)
+	time.Sleep(time.Duration(10) * time.Millisecond)
+	cs.ReconnectPeer(uint64(origLeaderId))
+	time.Sleep(time.Duration(300) * time.Millisecond)
+
+	num, _ := cs.CheckCommitted(5)
+
+	if num != 5 {
+		t.Errorf("expected commits = 5 found = %d", num)
+	}
+}

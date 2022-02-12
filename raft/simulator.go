@@ -301,8 +301,8 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int) (num int, index int) {
 
 	// If there's no early return, we haven't found the command we were looking
 	// for.
-	nc.t.Errorf("cmd=%d not found in commits", cmd)
-	return -1, -1
+	// nc.t.Errorf("cmd=%d not found in commits", cmd)
+	return 0, -1
 }
 
 func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) bool {
