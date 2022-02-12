@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/fortytw2/leaktest"
 )
 
 type Addr struct {
@@ -104,12 +106,16 @@ func TestServerClient(t *testing.T) {
 //REAL RAFT TESTS START HERE
 
 func TestElectionNormal(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 	cs.CheckUniqueLeader()
 }
 
 func TestElectionLeaderDisconnect(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
@@ -129,6 +135,8 @@ func TestElectionLeaderDisconnect(t *testing.T) {
 }
 
 func TestElectionLeaderAndFollowerDisconnect(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
@@ -147,6 +155,8 @@ func TestElectionLeaderAndFollowerDisconnect(t *testing.T) {
 }
 
 func TestElectionLeaderDisconnectAndReconnect(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
@@ -175,5 +185,145 @@ func TestElectionLeaderDisconnectAndReconnect(t *testing.T) {
 	}
 	if latestLeaderTerm != newLeaderTerm {
 		t.Errorf("latest leader term expected to be %d got %d", newLeaderTerm, latestLeaderTerm)
+	}
+}
+
+func TestElectionDisconnectAllAndReconnectAll(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	time.Sleep(300 * time.Millisecond)
+
+	for i := 0; i < 3; i++ {
+		cs.DisconnectPeer(uint64(i))
+	}
+	time.Sleep(300 * time.Millisecond)
+	cs.CheckNoLeader()
+
+	for i := 0; i < 3; i++ {
+		cs.ReconnectPeer(uint64(i))
+	}
+
+	time.Sleep(300 * time.Millisecond)
+	cs.CheckUniqueLeader()
+}
+
+func TestElectionLeaderDisconnectAndReconnect5Nodes(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	cs.DisconnectPeer(uint64(initialLeader))
+	time.Sleep(300 * time.Millisecond)
+
+	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeader == initialLeader {
+		t.Errorf("new leader expected to be different from initial leader")
+		return
+	}
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+		return
+	}
+
+	cs.ReconnectPeer(uint64(initialLeader))
+	time.Sleep(300 * time.Millisecond)
+
+	latestLeader, latestLeaderTerm := cs.CheckUniqueLeader()
+
+	if latestLeader != newLeader {
+		t.Errorf("latest leader expected to be %d, got %d", newLeader, latestLeader)
+	}
+	if latestLeaderTerm != newLeaderTerm {
+		t.Errorf("latest leader term expected to be %d got %d", newLeaderTerm, latestLeaderTerm)
+	}
+}
+
+func TestElectionFollowerDisconnectAndReconnect(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	follower := (initialLeader + 1) % 3
+	cs.DisconnectPeer(uint64(follower))
+
+	time.Sleep(300 * time.Millisecond)
+
+	cs.ReconnectPeer(uint64(follower))
+	time.Sleep(100 * time.Millisecond)
+	_, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+	}
+}
+
+func TestElectionDisconnectReconnectLoop(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	var term = 0
+
+	for i := 0; i < 6; i++ {
+		leader, newTerm := cs.CheckUniqueLeader()
+
+		if newTerm <= term {
+			t.Errorf("new leader term expected to be > old leader term, new term=%d old term=%d", newTerm, term)
+			return
+		}
+
+		cs.DisconnectPeer(uint64(leader))
+		follower := (leader + 1) % 3
+		cs.DisconnectPeer(uint64(follower))
+		time.Sleep(300 * time.Millisecond)
+		cs.CheckNoLeader()
+
+		cs.ReconnectPeer(uint64(follower))
+		cs.ReconnectPeer(uint64(leader))
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	_, newTerm := cs.CheckUniqueLeader()
+
+	if newTerm <= term {
+		t.Errorf("new leader term expected to be > old leader term, new term=%d old term=%d", newTerm, term)
+		return
+	}
+}
+
+func TestElectionFollowerDisconnectReconnectAfterLong(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+
+	follower := (initialLeader + 1) % 3
+	cs.DisconnectPeer(uint64(follower))
+
+	time.Sleep(1200 * time.Millisecond)
+
+	cs.ReconnectPeer(uint64(follower))
+
+	time.Sleep(500 * time.Millisecond)
+	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+	}
+
+	if newLeader != follower {
+		t.Errorf("new leader expected to be %d, got %d", follower, newLeader)
 	}
 }
