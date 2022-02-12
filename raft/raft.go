@@ -820,6 +820,22 @@ func (rn *RaftNode) Stop() {
 	close(rn.newCommitReady) // Close the channel
 }
 
+// Report reports the current state of the RaftNode
+// This function primarily  returns  the  following
+// information:
+// - The  identity  of  the  RaftNode
+// - The current term of the RaftNode
+// - The  boolean  indicating whether
+//   this   RaftNode   is   a  leader
+
+func (rn *RaftNode) Report() (id int, term int, isLeader bool) {
+	rn.mu.Lock()         // Lock the mutex
+	defer rn.mu.Unlock() // Unlock the mutex
+
+	isLeader = rn.state == Leader                    // Set the leader flag to true if the node is a leader
+	return int(rn.id), int(rn.currentTerm), isLeader // Return the id, term and leader flag
+}
+
 // String returns a string representation of the Raft node state.
 func (s RNState) String() string { // String returns the string representation of a Raft node state
 	switch s {
@@ -834,11 +850,4 @@ func (s RNState) String() string { // String returns the string representation o
 	default: // Should never happen
 		panic("Error: Unknown state")
 	}
-}
-
-func (rn *RaftNode) Report() (id int, term int, isLeader bool) {
-	rn.mu.Lock()
-	defer rn.mu.Unlock()
-	isLeader = rn.state == Leader
-	return int(rn.id), int(rn.currentTerm), isLeader
 }
