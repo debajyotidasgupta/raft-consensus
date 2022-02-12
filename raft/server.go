@@ -148,10 +148,10 @@ func (s *Server) Stop() {
 	close(s.quit)      // indicate the listener to stop listening
 	s.listener.Close() // close the listener
 
-	fmt.Printf("[%d] Waiting for existing connections to close\n", s.serverId)
+	log.Printf("[%d] Waiting for existing connections to close\n", s.serverId)
 	s.wg.Wait() // wait for all existing connections to close
 
-	fmt.Printf("[%d] All connections closed. Stopping server\n", s.serverId)
+	log.Printf("[%d] All connections closed. Stopping server\n", s.serverId)
 }
 
 func (s *Server) GetListenerAddr() net.Addr {
