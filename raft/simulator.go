@@ -12,7 +12,6 @@ import (
 func init() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 	seed := time.Now().UnixNano()
-	//var seed = int64(1644671576249871733)
 	fmt.Println("Seed: ", seed)
 	rand.Seed(seed)
 }
@@ -245,6 +244,65 @@ func (nc *ClusterSimulator) CheckNoLeader() {
 			}
 		}
 	}
+}
+
+func (nc *ClusterSimulator) CheckCommitted(cmd int) (num int, index int) {
+	nc.mu.Lock()
+	defer nc.mu.Unlock()
+
+	// Find the length of the commits slice for connected servers.
+	commitsLen := -1
+	for i := uint64(0); i < nc.n; i++ {
+		if nc.isConnected[i] {
+			if commitsLen >= 0 {
+				// If this was set already, expect the new length to be the same.
+				if len(nc.commits[i]) != commitsLen {
+					nc.t.Fatalf("commits[%d] = %d, commitsLen = %d", i, nc.commits[i], commitsLen)
+				}
+			} else {
+				commitsLen = len(nc.commits[i])
+			}
+		}
+	}
+
+	// Check consistency of commits from the start and to the command we're asked
+	// about. This loop will return once a command=cmd is found.
+	for c := 0; c < commitsLen; c++ {
+		cmdAtC := -1
+		for i := uint64(0); i < nc.n; i++ {
+			if nc.isConnected[i] {
+				cmdOfN := nc.commits[i][c].Command.(int)
+				if cmdAtC >= 0 {
+					if cmdOfN != cmdAtC {
+						nc.t.Errorf("got %d, want %d at nc.commits[%d][%d]", cmdOfN, cmdAtC, i, c)
+					}
+				} else {
+					cmdAtC = cmdOfN
+				}
+			}
+		}
+		if cmdAtC == cmd {
+			// Check consistency of Index.
+			index := -1
+			num := 0
+			for i := uint64(0); i < nc.n; i++ {
+				if nc.isConnected[i] {
+					if index >= 0 && int(nc.commits[i][c].Index) != index {
+						nc.t.Errorf("got Index=%d, want %d at h.commits[%d][%d]", nc.commits[i][c].Index, index, i, c)
+					} else {
+						index = int(nc.commits[i][c].Index)
+					}
+					num++
+				}
+			}
+			return num, index
+		}
+	}
+
+	// If there's no early return, we haven't found the command we were looking
+	// for.
+	nc.t.Errorf("cmd=%d not found in commits", cmd)
+	return -1, -1
 }
 
 func logtest(logstr string, a ...interface{}) {
