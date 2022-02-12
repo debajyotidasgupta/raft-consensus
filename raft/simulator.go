@@ -12,6 +12,7 @@ import (
 func init() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 	seed := time.Now().UnixNano()
+	//var seed = int64(1644671576249871733)
 	fmt.Println("Seed: ", seed)
 	rand.Seed(seed)
 }

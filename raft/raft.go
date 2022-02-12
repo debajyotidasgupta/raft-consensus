@@ -45,7 +45,7 @@ type RaftNode struct {
 
 	// Persistent state on all servers
 	currentTerm uint64     // CurrentTerm is the current term of the Raft node
-	votedFor    uint64     // VotedFor is the candidate id that received a vote in the current term
+	votedFor    int        // VotedFor is the candidate id that received a vote in the current term
 	log         []LogEntry // Log is the log of the Raft node
 
 	// IMPORTANT: Use 1 based indexing for log entries
@@ -119,7 +119,7 @@ func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready 
 		newCommitReady:     make(chan struct{}, 16), // NewCommitReady is an internal notification channel used to notify that new log entries may be sent on commitChan.
 		trigger:            make(chan struct{}, 1),  // Trigger is the channel used to trigger the Raft node to send a AppendEntries RPC to the peers when some relevant event occurs
 		currentTerm:        0,                       // CurrentTerm is the current term of the Raft node
-		votedFor:           0,                       // VotedFor is the candidate id that received a vote in the current term
+		votedFor:           -1,                      // VotedFor is the candidate id that received a vote in the current term
 		log:                make([]LogEntry, 0),     // Log is the log of the Raft node
 		commitIndex:        0,                       // CommitIndex is the index of the last committed log entry
 		lastApplied:        0,                       // LastApplied is the index of the last applied log entry
@@ -272,7 +272,7 @@ func (rn *RaftNode) startElection() {
 	rn.currentTerm += 1                // Increment the term
 	savedCurrentTerm := rn.currentTerm // Save the current term
 	rn.electionResetEvent = time.Now() // Set the Reset Event to current time
-	rn.votedFor = rn.id                // Vote for self
+	rn.votedFor = int(rn.id)           // Vote for self
 	votesReceived := 1                 // We have already voted for self
 
 	rn.debug("Becomes Candidate (currentTerm=%d); log=%v", savedCurrentTerm, rn.log)
@@ -692,7 +692,7 @@ func (rn *RaftNode) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) e
 	 */
 
 	if rn.currentTerm == args.Term &&
-		(rn.votedFor == 0 || rn.votedFor == args.CandidateId) &&
+		(rn.votedFor == -1 || rn.votedFor == int(args.CandidateId)) &&
 		(args.LastLogTerm > lastLogTerm || (args.LastLogTerm == lastLogTerm && args.LastLogIndex >= lastLogIndex)) {
 
 		// If the caller's term is aligned with ours and
@@ -700,9 +700,9 @@ func (rn *RaftNode) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) e
 		// we'll grant the vote. We  never  grant a vote
 		// for RPCs from older terms
 
-		reply.VoteGranted = true           // Grant the vote to the candidate
-		rn.votedFor = args.CandidateId     // Remember who we voted for
-		rn.electionResetEvent = time.Now() // Set the Reset Event to current time
+		reply.VoteGranted = true            // Grant the vote to the candidate
+		rn.votedFor = int(args.CandidateId) // Remember who we voted for
+		rn.electionResetEvent = time.Now()  // Set the Reset Event to current time
 
 	} else {
 
@@ -725,7 +725,7 @@ func (rn *RaftNode) becomeFollower(term uint64) {
 
 	rn.state = Follower                // Update the state to follower
 	rn.currentTerm = term              // Update the term
-	rn.votedFor = 0                    // Reset the votedFor to 0 [1 based index]
+	rn.votedFor = -1                   // Reset the votedFor to 0 [0 based index]
 	rn.electionResetEvent = time.Now() // Set the Reset Event to current time
 
 	go rn.runElectionTimer() // Run another election timer, since we transitioned to follower

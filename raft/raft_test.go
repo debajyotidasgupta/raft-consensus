@@ -128,6 +128,24 @@ func TestElectionLeaderDisconnect(t *testing.T) {
 	}
 }
 
+func TestElectionLeaderAndFollowerDisconnect(t *testing.T) {
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, _ := cs.CheckUniqueLeader()
+	cs.DisconnectPeer(uint64(initialLeader))
+	follower := (initialLeader + 1) % 3
+	cs.DisconnectPeer(uint64(follower))
+
+	time.Sleep(300 * time.Millisecond)
+	cs.CheckNoLeader()
+
+	cs.ReconnectPeer(uint64(initialLeader))
+	time.Sleep(100 * time.Millisecond)
+	cs.CheckUniqueLeader()
+
+}
+
 func TestElectionLeaderDisconnectAndReconnect(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
