@@ -54,12 +54,12 @@ func (s *Server) ConnectionAccept() {
 	defer s.wg.Done()
 
 	for {
-		fmt.Printf("[%d] Listening\n", s.serverId)
+		//log.Printf("[%d] Listening\n", s.serverId)
 		listener, err := s.listener.Accept() // wait to accept an incoming connection
 		if err != nil {
 			select {
 			case <-s.quit: // quit listening
-				fmt.Printf("[%d] Accepting no more connections\n", s.serverId)
+				log.Printf("[%d] Accepting no more connections\n", s.serverId)
 				return
 			default:
 				log.Fatalf("[%d] Error in accepting %v\n", s.serverId, err)
@@ -90,7 +90,7 @@ func (s *Server) Serve(port ...string) {
 
 	var st ServiceType = ServiceType(1)
 	s.service = &st
-	s.rpcServer.RegisterName("ServiceType", s.service)
+	//s.rpcServer.RegisterName("ServiceType", s.service)
 
 	var err error
 	var tcpPort string = ":"
@@ -108,26 +108,7 @@ func (s *Server) Serve(port ...string) {
 
 	s.wg.Add(1)
 
-	go func() {
-		defer s.wg.Done()
-
-		for {
-			conn, err := s.listener.Accept()
-			if err != nil {
-				select {
-				case <-s.quit:
-					return
-				default:
-					log.Fatal("accept error: ", err)
-				}
-			}
-			s.wg.Add(1)
-			go func() {
-				s.rpcServer.ServeConn(conn)
-				s.wg.Done()
-			}()
-		}
-	}()
+	go s.ConnectionAccept()
 }
 
 //close connections to all peers

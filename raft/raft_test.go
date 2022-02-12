@@ -115,10 +115,6 @@ func TestElectionLeaderDisconnect(t *testing.T) {
 
 	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
 
-	if initialLeader < 0 {
-		t.Errorf("no leader yet!")
-	}
-
 	cs.DisconnectPeer(uint64(initialLeader))
 	time.Sleep(300 * time.Millisecond)
 
@@ -129,5 +125,37 @@ func TestElectionLeaderDisconnect(t *testing.T) {
 	}
 	if newLeaderTerm <= initialLeaderTerm {
 		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+	}
+}
+
+func TestElectionLeaderDisconnectAndReconnect(t *testing.T) {
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	cs.DisconnectPeer(uint64(initialLeader))
+	time.Sleep(300 * time.Millisecond)
+
+	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeader == initialLeader {
+		t.Errorf("new leader expected to be different from initial leader")
+		return
+	}
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+		return
+	}
+
+	cs.ReconnectPeer(uint64(initialLeader))
+	time.Sleep(300 * time.Millisecond)
+
+	latestLeader, latestLeaderTerm := cs.CheckUniqueLeader()
+
+	if latestLeader != newLeader {
+		t.Errorf("latest leader expected to be %d, got %d", newLeader, latestLeader)
+	}
+	if latestLeaderTerm != newLeaderTerm {
+		t.Errorf("latest leader term expected to be %d got %d", newLeaderTerm, latestLeaderTerm)
 	}
 }
