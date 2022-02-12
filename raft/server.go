@@ -90,7 +90,7 @@ func (s *Server) Serve(port ...string) {
 
 	var st ServiceType = ServiceType(1)
 	s.service = &st
-	//s.rpcServer.RegisterName("ServiceType", s.service)
+	s.rpcServer.RegisterName("ServiceType", s.service)
 
 	var err error
 	var tcpPort string = ":"
