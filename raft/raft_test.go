@@ -80,7 +80,12 @@ func TestServerClient(t *testing.T) {
 				j++
 			}
 		}
-		s := CreateServer(i, peerIds)
+
+		db := NewDatabase()
+		ready := make(chan interface{})
+		commitChan := make(chan CommitEntry)
+
+		s := CreateServer(i, peerIds, db, ready, commitChan)
 		if s == nil {
 			t.Errorf("ERROR: server could not be created")
 		}

@@ -27,6 +27,8 @@ type Server struct {
 	rpcProxy   *RPCProxy
 	commitChan chan CommitEntry
 	ready      <-chan interface{}
+
+	service *ServiceType // DUMMY SERVICE FOR TESTING PURPOSES
 }
 
 type RPCProxy struct {
@@ -76,16 +78,28 @@ func (s *Server) ConnectionAccept() {
 //2. register the service with RPC
 //3. get a lister for TCP port passed as argument
 //4. start listening for incoming connections
-func (s *Server) Serve() {
+func (s *Server) Serve(port ...string) {
 	s.mu.Lock()
 	s.rn = NewRaftNode(s.serverId, s.peerIds, s, s.db, s.ready, s.commitChan)
 
 	s.rpcServer = rpc.NewServer() //create a new RPC Server for the new service
 	s.rpcProxy = &RPCProxy{rn: s.rn}
-	s.rpcServer.RegisterName("RaftNode", s.rpcProxy) //register the new service
+	//MIGHT ADD PROXY LATER
+	//s.rpcServer.RegisterName("RaftNode", s.rpcProxy) //register the new service
+	s.rpcServer.RegisterName("RaftNode", s.rn)
+
+	var st ServiceType = ServiceType(1)
+	s.service = &st
+	s.rpcServer.RegisterName("ServiceType", s.service)
 
 	var err error
-	s.listener, err = net.Listen("tcp", ":0") //get a listener to the tcp port
+	var tcpPort string = ":"
+	if len(port) == 1 {
+		tcpPort = tcpPort + port[0]
+	} else {
+		tcpPort = tcpPort + "0"
+	}
+	s.listener, err = net.Listen("tcp", tcpPort) //get a listener to the tcp port
 	if err != nil {
 		log.Fatal(err)
 	}

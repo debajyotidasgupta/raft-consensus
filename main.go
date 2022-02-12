@@ -35,7 +35,7 @@ func main() {
 		}
 	}
 
-	s := raft.CreateServer(serverId, peerIds)
+	s := raft.CreateServer(serverId, peerIds, nil, nil, nil)
 
 	fmt.Println("Serving")
 
