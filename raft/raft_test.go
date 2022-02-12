@@ -102,8 +102,32 @@ func TestServerClient(t *testing.T) {
 }
 
 //REAL RAFT TESTS START HERE
+
 func TestElectionNormal(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 	cs.CheckUniqueLeader()
+}
+
+func TestElectionLeaderDisconnect(t *testing.T) {
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+
+	if initialLeader < 0 {
+		t.Errorf("no leader yet!")
+	}
+
+	cs.DisconnectPeer(uint64(initialLeader))
+	time.Sleep(300 * time.Millisecond)
+
+	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeader == initialLeader {
+		t.Errorf("new leader expected to be different from initial leader")
+	}
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+	}
 }
