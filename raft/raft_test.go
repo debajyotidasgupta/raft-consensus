@@ -100,3 +100,10 @@ func TestServerClient(t *testing.T) {
 
 	wg.Wait()
 }
+
+//REAL RAFT TESTS START HERE
+func TestElectionNormal(t *testing.T) {
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+	cs.CheckUniqueLeader()
+}

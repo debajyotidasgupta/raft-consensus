@@ -297,7 +297,7 @@ func (rn *RaftNode) startElection() {
 			if err := rn.server.RPC(peer, "RaftNode.RequestVote", args, &reply); err == nil {
 				rn.mu.Lock()         // Lock the Raft Node
 				defer rn.mu.Unlock() // Unlock the Raft Node
-				rn.debug("received RequestVoteReply %+v", reply)
+				rn.debug("received RequestVoteReply %+v from %v", reply, peer)
 
 				if rn.state != Candidate { // If we are no longer a candidate, bail out
 					rn.debug("While waiting for reply, state = %v", rn.state)
@@ -305,7 +305,7 @@ func (rn *RaftNode) startElection() {
 				}
 
 				if reply.Term > savedCurrentTerm { // If the term is greater than ours, we are no longer a candidate
-					rn.debug("Term out of date in RequestVoteReply")
+					rn.debug("Term out of date in RequestVoteReply from %v", peer)
 					rn.becomeFollower(reply.Term) // Become a follower
 					return
 				} else if reply.Term == savedCurrentTerm {
@@ -681,7 +681,7 @@ func (rn *RaftNode) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) e
 		// If it's already a follower, the state won't change
 		// but the other state fields will reset
 
-		rn.debug("Term out of date in RequestVote")
+		rn.debug("Term out of date with term in RequestVote")
 		rn.becomeFollower(args.Term)
 	}
 
