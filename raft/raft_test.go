@@ -177,3 +177,23 @@ func TestElectionLeaderDisconnectAndReconnect(t *testing.T) {
 		t.Errorf("latest leader term expected to be %d got %d", newLeaderTerm, latestLeaderTerm)
 	}
 }
+
+func TestElectionDisconnectAllAndReconnectAll(t *testing.T) {
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	time.Sleep(300 * time.Millisecond)
+
+	for i := 0; i < 3; i++ {
+		cs.DisconnectPeer(uint64(i))
+	}
+	time.Sleep(300 * time.Millisecond)
+	cs.CheckNoLeader()
+
+	for i := 0; i < 3; i++ {
+		cs.ReconnectPeer(uint64(i))
+	}
+
+	time.Sleep(300 * time.Millisecond)
+	cs.CheckUniqueLeader()
+}
