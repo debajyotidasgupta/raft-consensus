@@ -327,3 +327,25 @@ func TestElectionFollowerDisconnectReconnectAfterLong(t *testing.T) {
 		t.Errorf("new leader expected to be %d, got %d", follower, newLeader)
 	}
 }
+
+func TestCommitOneCommand(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+
+	logtest("submitting 42 to %d", origLeaderId)
+	isLeader := cs.SubmitToServer(origLeaderId, 42)
+	if !isLeader {
+		t.Errorf("want id=%d leader, but it's not", origLeaderId)
+	}
+
+	logtest("Now sleeping")
+	time.Sleep(time.Duration(250) * time.Millisecond)
+	num, _ := cs.CheckCommitted(42)
+	if num != 3 {
+		t.Errorf("Not committed by 3 nodes")
+	}
+}

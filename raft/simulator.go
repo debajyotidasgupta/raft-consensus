@@ -305,6 +305,10 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int) (num int, index int) {
 	return -1, -1
 }
 
+func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) bool {
+	return nc.raftCluster[serverId].rn.Submit(cmd)
+}
+
 func logtest(logstr string, a ...interface{}) {
 	logstr = "[TEST]" + logstr
 	log.Printf(logstr, a...)

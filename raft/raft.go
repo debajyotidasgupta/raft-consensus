@@ -166,8 +166,8 @@ func (rn *RaftNode) sendCommit() {
 		// Find the slice of entry that we have not applied yet.
 		var entries []LogEntry               // Entries is the slice of log entries that we have not applied yet
 		if rn.commitIndex > rn.lastApplied { // If the commit index is greater than the last applied index
-			entries = rn.log[rn.lastApplied+1 : rn.commitIndex+1] // Entries is the slice of log entries that we have not applied yet
-			rn.lastApplied = rn.commitIndex                       // Update the last applied index
+			entries = rn.log[rn.lastApplied:rn.commitIndex] // Entries is the slice of log entries that we have not applied yet
+			rn.lastApplied = rn.commitIndex                 // Update the last applied index
 		}
 		rn.mu.Unlock() // Unlock the Raft node
 		rn.debug("sendCommit entries=%v, savedLastApplied=%d", entries, savedLastApplied)
