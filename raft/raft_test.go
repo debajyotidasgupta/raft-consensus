@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/fortytw2/leaktest"
 )
 
 type Addr struct {
@@ -196,4 +198,38 @@ func TestElectionDisconnectAllAndReconnectAll(t *testing.T) {
 
 	time.Sleep(300 * time.Millisecond)
 	cs.CheckUniqueLeader()
+}
+
+func TestElectionLeaderDisconnectAndReconnect5Nodes(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	cs.DisconnectPeer(uint64(initialLeader))
+	time.Sleep(300 * time.Millisecond)
+
+	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeader == initialLeader {
+		t.Errorf("new leader expected to be different from initial leader")
+		return
+	}
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+		return
+	}
+
+	cs.ReconnectPeer(uint64(initialLeader))
+	time.Sleep(300 * time.Millisecond)
+
+	latestLeader, latestLeaderTerm := cs.CheckUniqueLeader()
+
+	if latestLeader != newLeader {
+		t.Errorf("latest leader expected to be %d, got %d", newLeader, latestLeader)
+	}
+	if latestLeaderTerm != newLeaderTerm {
+		t.Errorf("latest leader term expected to be %d got %d", newLeaderTerm, latestLeaderTerm)
+	}
 }
