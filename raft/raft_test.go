@@ -350,6 +350,39 @@ func TestCommitOneCommand(t *testing.T) {
 	}
 }
 
+func TestElectionFollowerDisconnectReconnectAfterLongCommitDone(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)
+
+	cs := CreateNewCluster(t, 3)
+	defer cs.Shutdown()
+
+	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+
+	follower := (initialLeader + 1) % 3
+	cs.DisconnectPeer(uint64(follower))
+
+	logtest("submitting 42 to %d", initialLeader)
+	isLeader := cs.SubmitToServer(initialLeader, 42)
+	if !isLeader {
+		t.Errorf("want id=%d leader, but it's not", initialLeader)
+	}
+
+	time.Sleep(1200 * time.Millisecond)
+
+	cs.ReconnectPeer(uint64(follower))
+
+	time.Sleep(500 * time.Millisecond)
+	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+
+	if newLeaderTerm <= initialLeaderTerm {
+		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
+	}
+
+	if newLeader == follower {
+		t.Errorf("new leader not expected to be %d", follower)
+	}
+}
+
 func TestTryCommitToNonLeader(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
