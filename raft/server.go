@@ -22,11 +22,11 @@ type Server struct {
 	quit      chan interface{}       // channel to indicate to stop listening for incoming connections
 	wg        sync.WaitGroup         // waitgroup to wait for all connections to close before gracefully stopping
 
-	rn         *RaftNode
-	db         *Database
-	rpcProxy   *RPCProxy
-	commitChan chan CommitEntry
-	ready      <-chan interface{}
+	rn         *RaftNode          // raft node service implemented on this server
+	db         *Database          // storage for this server
+	rpcProxy   *RPCProxy          // NOT USED YET
+	commitChan chan CommitEntry   // channel to receive commit entries from raftnode
+	ready      <-chan interface{} // channel to indicate raftnode that this server is connected to its peers
 
 	service *ServiceType // DUMMY SERVICE FOR TESTING PURPOSES
 }
