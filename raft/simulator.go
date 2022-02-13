@@ -34,6 +34,13 @@ type ClusterSimulator struct {
 	t *testing.T
 }
 
+type CommitFunctionType int
+
+const (
+	TestCommitFunction CommitFunctionType = iota
+	TestNoCommitFunction
+)
+
 // Create a new ClusterSimulator
 func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	// initialising required fields of ClusterSimulator
@@ -246,7 +253,7 @@ func (nc *ClusterSimulator) CheckNoLeader() {
 	}
 }
 
-func (nc *ClusterSimulator) CheckCommitted(cmd int) (num int, index int) {
+func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (num int, index int) {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
@@ -299,10 +306,15 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int) (num int, index int) {
 		}
 	}
 
-	// If there's no early return, we haven't found the command we were looking
-	// for.
-	// nc.t.Errorf("cmd=%d not found in commits", cmd)
-	return 0, -1
+	// If there's no early return, we haven't found the command we were looking for
+
+	if choice == TestCommitFunction {
+		nc.t.Errorf("cmd = %d not found in commits", cmd)
+		return 0, -1
+	} else {
+		return 0, -1
+	}
+
 }
 
 func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) bool {

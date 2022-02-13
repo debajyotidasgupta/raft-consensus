@@ -344,7 +344,7 @@ func TestCommitOneCommand(t *testing.T) {
 
 	logtest("Now sleeping")
 	time.Sleep(time.Duration(250) * time.Millisecond)
-	num, _ := cs.CheckCommitted(42)
+	num, _ := cs.CheckCommitted(42, 0)
 	if num != 3 {
 		t.Errorf("Not committed by 3 nodes")
 	}
@@ -383,7 +383,7 @@ func TestCommitThenLeaderDisconnect(t *testing.T) {
 	cs.DisconnectPeer(uint64(origLeaderId))
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
-	num, _ := cs.CheckCommitted(42)
+	num, _ := cs.CheckCommitted(42, 0)
 	logtest("committed by %d nodes", num)
 
 }
@@ -407,9 +407,9 @@ func TestCommitMultipleCommands(t *testing.T) {
 	}
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	com1, i1 := cs.CheckCommitted(42)
-	com2, i2 := cs.CheckCommitted(55)
-	com3, i3 := cs.CheckCommitted(81)
+	com1, i1 := cs.CheckCommitted(42, 0)
+	com2, i2 := cs.CheckCommitted(55, 0)
+	com3, i3 := cs.CheckCommitted(81, 0)
 
 	if com1 != 3 || com2 != 3 || com3 != 3 {
 		t.Errorf("expected com1 = com2 = com3 = 3 found com1 = %d com2 = %d com3 = %d", com1, com2, com3)
@@ -432,7 +432,7 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	cs.SubmitToServer(origLeaderId, 6)
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ := cs.CheckCommitted(6)
+	num, _ := cs.CheckCommitted(6, 0)
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
 	}
@@ -444,7 +444,7 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	// Submit a new command; it will be committed but only to two servers.
 	cs.SubmitToServer(origLeaderId, 7)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ = cs.CheckCommitted(7)
+	num, _ = cs.CheckCommitted(7, 0)
 	if num != 2 {
 		t.Errorf("expected 2 commits found = %d", num)
 	}
@@ -453,7 +453,7 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ = cs.CheckCommitted(7)
+	num, _ = cs.CheckCommitted(7, 0)
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
 	}
@@ -469,7 +469,7 @@ func TestTryCommitMajorityFailure(t *testing.T) {
 	cs.SubmitToServer(origLeaderId, 5)
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ := cs.CheckCommitted(5)
+	num, _ := cs.CheckCommitted(5, 0)
 
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
@@ -484,7 +484,7 @@ func TestTryCommitMajorityFailure(t *testing.T) {
 
 	cs.SubmitToServer(origLeaderId, 6)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	numC, _ := cs.CheckCommitted(6)
+	numC, _ := cs.CheckCommitted(6, 1)
 
 	if numC != 0 {
 		t.Errorf("expected 0 commits found = %d", numC)
@@ -498,7 +498,7 @@ func TestTryCommitMajorityFailure(t *testing.T) {
 	cs.SubmitToServer(newLeaderId, 8)
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
-	numF, _ := cs.CheckCommitted(8)
+	numF, _ := cs.CheckCommitted(8, 1)
 	if numF != 3 {
 		t.Errorf("expected 3 commits found = %d", numF)
 	}
@@ -520,7 +520,7 @@ func TestTryCommitToDCLeader(t *testing.T) {
 	cs.SubmitToServer(origLeaderId, 6)
 	time.Sleep(time.Duration(200) * time.Millisecond)
 
-	num1, _ := cs.CheckCommitted(6)
+	num1, _ := cs.CheckCommitted(6, 1)
 	if num1 != 0 {
 		t.Errorf("expected 0 commits found = %d", num1)
 	}
@@ -528,7 +528,7 @@ func TestTryCommitToDCLeader(t *testing.T) {
 	newLeaderId, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(newLeaderId, 7)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num2, _ := cs.CheckCommitted(7)
+	num2, _ := cs.CheckCommitted(7, 0)
 
 	if num2 != 4 {
 		t.Errorf("expected 4 commits found = %d", num2)
@@ -540,9 +540,9 @@ func TestTryCommitToDCLeader(t *testing.T) {
 	newLeaderId, _ = cs.CheckUniqueLeader()
 	cs.SubmitToServer(newLeaderId, 8)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num3, _ := cs.CheckCommitted(7)
-	num4, _ := cs.CheckCommitted(8)
-	num5, _ := cs.CheckCommitted(6)
+	num3, _ := cs.CheckCommitted(7, 0)
+	num4, _ := cs.CheckCommitted(8, 0)
+	num5, _ := cs.CheckCommitted(6, 1)
 	if num3 != 5 || num4 != 5 || num5 != 0 {
 		t.Errorf("expected num3 = num4 = 5 and num5 = 0 found num3= %d num4 = %d num5 = %d", num3, num4, num5)
 	}
@@ -561,7 +561,7 @@ func TestTryCommitLeaderDisconnectsShortTime(t *testing.T) {
 	cs.ReconnectPeer(uint64(origLeaderId))
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
-	num, _ := cs.CheckCommitted(5)
+	num, _ := cs.CheckCommitted(5, 0)
 
 	if num != 5 {
 		t.Errorf("expected commits = 5 found = %d", num)
