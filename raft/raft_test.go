@@ -567,3 +567,76 @@ func TestTryCommitLeaderDisconnectsShortTime(t *testing.T) {
 		t.Errorf("expected commits = 5 found = %d", num)
 	}
 }
+
+func TestCrashFollowerThenLeader(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(origLeaderId, 25)
+	cs.SubmitToServer(origLeaderId, 26)
+	cs.SubmitToServer(origLeaderId, 27)
+	time.Sleep(time.Duration(250) * time.Millisecond)
+
+	dPeerID1 := (origLeaderId + 1) % 5
+	dPeerID2 := (origLeaderId + 2) % 5
+	cs.CrashPeer(uint64(dPeerID1))
+	cs.CrashPeer(uint64(dPeerID2))
+	time.Sleep(time.Duration(250) * time.Millisecond)
+
+	num1, _ := cs.CheckCommitted(25, 0)
+	num2, _ := cs.CheckCommitted(26, 0)
+	num3, _ := cs.CheckCommitted(27, 0)
+
+	if num1 != 3 || num2 != 3 || num3 != 3 {
+		t.Errorf("expected num1 = num2 = num3 = 3 got num1 = %d num2 = %d num3 = %d", num1, num2, num3)
+	}
+
+	cs.RestartPeer(uint64(dPeerID1))
+	time.Sleep(time.Duration(250) * time.Millisecond)
+	cs.CrashPeer(uint64(origLeaderId))
+	time.Sleep(time.Duration(250) * time.Millisecond)
+
+	newLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(newLeaderId, 29)
+	time.Sleep(time.Duration(250) * time.Millisecond)
+	num4, _ := cs.CheckCommitted(29, 0)
+
+	if num4 != 3 {
+		t.Errorf("expected commit number = 3 found = %d", num4)
+	}
+
+}
+
+func TestCrashJustAfterSubmitThenRestart(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	origLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(origLeaderId, 25)
+	time.Sleep(time.Duration(1) * time.Millisecond)
+	cs.CrashPeer(uint64(origLeaderId))
+	time.Sleep(time.Duration(250) * time.Millisecond)
+
+	num, _ := cs.CheckCommitted(25, 1)
+	if num != 0 {
+		t.Errorf("expected 0 commits found %d", num)
+	}
+
+	cs.RestartPeer(uint64(origLeaderId))
+	time.Sleep(time.Duration(150) * time.Millisecond)
+	newLeaderId, _ := cs.CheckUniqueLeader()
+	cs.SubmitToServer(newLeaderId, 27)
+	time.Sleep(time.Duration(250) * time.Millisecond)
+
+	num1, _ := cs.CheckCommitted(25, 0)
+	num2, _ := cs.CheckCommitted(27, 0)
+
+	if num1 != 5 || num2 != 5 {
+		t.Errorf("expected num1 = num2 = 5 found num1 = %d num2 = %d", num1, num2)
+	}
+}
