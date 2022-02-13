@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -130,7 +131,7 @@ func (nc *ClusterSimulator) Shutdown() {
 func (nc *ClusterSimulator) collectCommits(i uint64) {
 	for commit := range nc.commitChans[i] {
 		nc.mu.Lock()
-		logtest("collectCommits (%d) got %+v", i, commit)
+		logtest(i, "collectCommits (%d) got %+v", i, commit)
 		nc.commits[i] = append(nc.commits[i], commit)
 		nc.mu.Unlock()
 	}
@@ -138,7 +139,7 @@ func (nc *ClusterSimulator) collectCommits(i uint64) {
 
 // Disconnect a server from other servers
 func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
-	logtest("Disconnect %d", id)
+	logtest(id, "Disconnect %d", id)
 
 	nc.raftCluster[id].DisconnectAll()
 	for i := uint64(0); i < nc.n; i++ {
@@ -153,7 +154,7 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 
 // Reconnect a server to other servers
 func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
-	logtest("Reconnect %d", id)
+	logtest(id, "Reconnect %d", id)
 
 	for i := uint64(0); i < nc.n; i++ {
 		if i != id && nc.isAlive[i] {
@@ -173,7 +174,7 @@ func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 
 // Crash a server and shut it down
 func (nc *ClusterSimulator) CrashPeer(id uint64) {
-	logtest("Crash %d", id)
+	logtest(id, "Crash %d", id)
 
 	nc.DisconnectPeer(id)
 	nc.isAlive[id] = false
@@ -189,7 +190,7 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) {
 	if nc.isAlive[id] {
 		log.Fatalf("Id %d alive in restart peer", id)
 	}
-	logtest("Restart ", id)
+	logtest(id, "Restart ", id, id)
 
 	peerIds := make([]uint64, 0)
 
@@ -321,7 +322,7 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) bool {
 	return nc.raftCluster[serverId].rn.Submit(cmd)
 }
 
-func logtest(logstr string, a ...interface{}) {
-	logstr = "[TEST]" + logstr
+func logtest(id uint64, logstr string, a ...interface{}) {
+	logstr = "[" + strconv.Itoa(int(id)) + "] " + "[TEST]" + logstr
 	log.Printf(logstr, a...)
 }

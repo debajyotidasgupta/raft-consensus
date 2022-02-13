@@ -336,13 +336,12 @@ func TestCommitOneCommand(t *testing.T) {
 
 	origLeaderId, _ := cs.CheckUniqueLeader()
 
-	logtest("submitting 42 to %d", origLeaderId)
+	logtest(uint64(origLeaderId), "submitting 42 to %d", origLeaderId)
 	isLeader := cs.SubmitToServer(origLeaderId, 42)
 	if !isLeader {
 		t.Errorf("want id=%d leader, but it's not", origLeaderId)
 	}
 
-	logtest("Now sleeping")
 	time.Sleep(time.Duration(250) * time.Millisecond)
 	num, _ := cs.CheckCommitted(42, 0)
 	if num != 3 {
@@ -361,7 +360,7 @@ func TestElectionFollowerDisconnectReconnectAfterLongCommitDone(t *testing.T) {
 	follower := (initialLeader + 1) % 3
 	cs.DisconnectPeer(uint64(follower))
 
-	logtest("submitting 42 to %d", initialLeader)
+	logtest(uint64(initialLeader), "submitting 42 to %d", initialLeader)
 	isLeader := cs.SubmitToServer(initialLeader, 42)
 	if !isLeader {
 		t.Errorf("want id=%d leader, but it's not", initialLeader)
@@ -389,7 +388,7 @@ func TestTryCommitToNonLeader(t *testing.T) {
 
 	leaderId, _ := cs.CheckUniqueLeader()
 	servingId := (leaderId + 1) % 3
-	logtest("submitting 42 to %d", servingId)
+	logtest(uint64(servingId), "submitting 42 to %d", servingId)
 	isLeader := cs.SubmitToServer(servingId, 42)
 	if isLeader {
 		t.Errorf("want id=%d to be non leader, but it is", servingId)
@@ -405,7 +404,7 @@ func TestCommitThenLeaderDisconnect(t *testing.T) {
 
 	origLeaderId, _ := cs.CheckUniqueLeader()
 
-	logtest("submitting 42 to %d", origLeaderId)
+	logtest(uint64(origLeaderId), "submitting 42 to %d", origLeaderId)
 	isLeader := cs.SubmitToServer(origLeaderId, 42)
 	if !isLeader {
 		t.Errorf("want id=%d leader, but it's not", origLeaderId)
@@ -417,7 +416,9 @@ func TestCommitThenLeaderDisconnect(t *testing.T) {
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
 	num, _ := cs.CheckCommitted(42, 0)
-	logtest("committed by %d nodes", num)
+	if num != 2 {
+		t.Errorf("expected 2 commits found = %d", num)
+	}
 
 }
 
@@ -431,7 +432,7 @@ func TestCommitMultipleCommands(t *testing.T) {
 
 	values := []int{42, 55, 81}
 	for _, v := range values {
-		logtest("submitting %d to %d", v, origLeaderId)
+		logtest(uint64(origLeaderId), "submitting %d to %d", v, origLeaderId)
 		isLeader := cs.SubmitToServer(origLeaderId, v)
 		if !isLeader {
 			t.Errorf("want id=%d leader, but it's not", origLeaderId)
@@ -651,7 +652,7 @@ func TestCrashJustAfterSubmitThenRestart(t *testing.T) {
 
 	origLeaderId, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(origLeaderId, 25)
-	time.Sleep(time.Duration(1) * time.Millisecond)
+	time.Sleep(time.Duration(900) * time.Microsecond)
 	cs.CrashPeer(uint64(origLeaderId))
 	time.Sleep(time.Duration(250) * time.Millisecond)
 
