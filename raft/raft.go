@@ -150,34 +150,38 @@ func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready 
 	return node
 }
 
-func (rn *RaftNode) ApplyCommit(command interface{}, reply interface{}) error {
-	switch v := command.(type) {
-	case Write:
-		var buf bytes.Buffer        // Buffer to hold the data
-		enc := gob.NewEncoder(&buf) // Create a new encoder
+func (rn *RaftNode) writeToStorage(key string, value int) error {
+	var buf bytes.Buffer        // Buffer to hold the data
+	enc := gob.NewEncoder(&buf) // Create a new encoder
 
-		if err := enc.Encode(v.val); err != nil { // Encode the data
-			log.Fatal("encode error: ", err) // If there's an error, log it
-		}
-		rn.db.Set(v.key, buf.Bytes()) // Save the data to the database
-		return nil
-	case Read:
-		key := v.key
-		if value, found := rn.db.Get(key); found {
-			// If the data is found in the database, decode it
-			dec := gob.NewDecoder(bytes.NewBuffer(value)) // Create a new decoder
-			if err := dec.Decode(reply); err != nil {     // Decode the data
-				log.Fatal("decode error: ", err) // If there;s an error , log it
-				return err
-			}
-		} else {
-			err := fmt.Errorf("KeyNotFound:%v", v.key)
+	if err := enc.Encode(value); err != nil { // Encode the data
+		return err
+	}
+	rn.db.Set(key, buf.Bytes()) // Save the data to the database
+	return nil
+}
+
+func (rn *RaftNode) readFromStorage(key string, reply interface{}) error {
+	if value, found := rn.db.Get(key); found {
+		// If the data is found in the database, decode it
+		dec := gob.NewDecoder(bytes.NewBuffer(value)) // Create a new decoder
+		if err := dec.Decode(reply); err != nil {     // Decode the data
 			return err
 		}
+		return nil
+	} else {
+		err := fmt.Errorf("KeyNotFound:%v", key)
+		return err
+	}
+}
+
+func (rn *RaftNode) ApplyCommit(command interface{}) error {
+	switch v := command.(type) {
+	case Write:
+		return rn.writeToStorage(v.Key, int(v.Val))
 	default:
 		return nil
 	}
-	return nil
 }
 
 // sendCommit  sends  committed  entries on commit channel.  It watches
@@ -818,18 +822,30 @@ func (rn *RaftNode) restoreFromStorage() {
 // accepted.  If  false  is  returned,  the  client will have to find a
 // different RaftNode to submit this command to.
 
-func (rn *RaftNode) Submit(command interface{}) bool {
+func (rn *RaftNode) Submit(command interface{}, reply ...interface{}) bool {
 	rn.mu.Lock() // Lock the mutex
 	rn.debug("Submit received by %v: %v", rn.state, command)
 
 	// Process the command only if the node is a leader
 	if rn.state == Leader {
-		rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
-		rn.persistToStorage()                                                     // Persist the log to storage
-		rn.debug("log=%v", rn.log)                                                // Debug the log state
-		rn.mu.Unlock()                                                            // Unlock the mutex before returning
-		rn.trigger <- struct{}{}                                                  // Trigger the event for append entries
-		return true                                                               // Return true since we are the leader
+		switch v := command.(type) {
+		case Read:
+			key := v.Key
+			if len(reply) > 0 {
+				rn.readFromStorage(key, reply[0])
+			} else {
+				var value *int
+				rn.readFromStorage(key, value)
+			}
+			return true
+		default:
+			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
+			rn.persistToStorage()                                                     // Persist the log to storage
+			rn.debug("log=%v", rn.log)                                                // Debug the log state
+			rn.mu.Unlock()                                                            // Unlock the mutex before returning
+			rn.trigger <- struct{}{}                                                  // Trigger the event for append entries
+			return true                                                               // Return true since we are the leader
+		}
 	}
 
 	rn.mu.Unlock() // Unlock the mutex

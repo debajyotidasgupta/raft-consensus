@@ -43,12 +43,12 @@ const (
 )
 
 type Write struct {
-	key string
-	val uint64
+	Key string
+	Val int
 }
 
 type Read struct {
-	key string
+	Key string
 }
 
 // Create a new ClusterSimulator
@@ -327,8 +327,8 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 
 }
 
-func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) bool {
-	return nc.raftCluster[serverId].rn.Submit(cmd)
+func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}, reply ...interface{}) bool {
+	return nc.raftCluster[serverId].rn.Submit(cmd, reply)
 }
 
 //PART OF CONFIGURATION CHANGE
