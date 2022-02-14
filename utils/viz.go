@@ -1,4 +1,4 @@
-package raft
+package main
 
 import (
 	"bufio"
@@ -12,6 +12,30 @@ import (
 	"strings"
 	"text/template"
 )
+
+type ServerState int
+
+const (
+	Follower ServerState = iota
+	Candidate
+	Leader
+	Dead
+)
+
+func (s ServerState) String() string {
+	switch s {
+	case Follower:
+		return "Follower"
+	case Candidate:
+		return "Candidate"
+	case Leader:
+		return "Leader"
+	case Dead:
+		return "Dead"
+	default:
+		panic("unreachable")
+	}
+}
 
 // Entry is a single log entry emitted by a raft server.
 type Entry struct {
@@ -115,7 +139,7 @@ func emitTestViz(dirname string, tl TestLog) {
 		headers = append(headers, strconv.Itoa(i))
 	}
 
-	serverState := make([]RNState, nservers)
+	serverState := make([]ServerState, nservers)
 
 	var htmlitems []string
 	for _, entry := range tl.entries {
@@ -190,7 +214,7 @@ func parseTestLogs(rd io.Reader) []TestLog {
 	scanner := bufio.NewScanner(bufio.NewReader(rd))
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "=== RUN") {
+		if strings.Contains(line, "=== RUN") {
 			testlogs = append(testlogs, TestLog{ids: make(map[string]bool)})
 			testlogs[len(testlogs)-1].name = strings.TrimSpace(line[7:])
 		} else {
