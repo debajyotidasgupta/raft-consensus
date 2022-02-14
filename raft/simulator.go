@@ -42,6 +42,15 @@ const (
 	TestNoCommitFunction
 )
 
+type Write struct {
+	key string
+	val uint64
+}
+
+type Read struct {
+	key string
+}
+
 // Create a new ClusterSimulator
 func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	// initialising required fields of ClusterSimulator

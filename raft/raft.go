@@ -150,6 +150,36 @@ func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready 
 	return node
 }
 
+func (rn *RaftNode) ApplyCommit(command interface{}, reply interface{}) error {
+	switch v := command.(type) {
+	case Write:
+		var buf bytes.Buffer        // Buffer to hold the data
+		enc := gob.NewEncoder(&buf) // Create a new encoder
+
+		if err := enc.Encode(v.val); err != nil { // Encode the data
+			log.Fatal("encode error: ", err) // If there's an error, log it
+		}
+		rn.db.Set(v.key, buf.Bytes()) // Save the data to the database
+		return nil
+	case Read:
+		key := v.key
+		if value, found := rn.db.Get(key); found {
+			// If the data is found in the database, decode it
+			dec := gob.NewDecoder(bytes.NewBuffer(value)) // Create a new decoder
+			if err := dec.Decode(reply); err != nil {     // Decode the data
+				log.Fatal("decode error: ", err) // If there;s an error , log it
+				return err
+			}
+		} else {
+			err := fmt.Errorf("KeyNotFound:%v", v.key)
+			return err
+		}
+	default:
+		return nil
+	}
+	return nil
+}
+
 // sendCommit  sends  committed  entries on commit channel.  It watches
 // newCommitReady  for  notifications  and calculates which new entries
 // are ready to be sent. This method should run in background goroutine
