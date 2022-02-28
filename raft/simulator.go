@@ -169,11 +169,19 @@ func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 		if i != id && nc.isAlive[i] {
 			err := nc.raftCluster[id].ConnectToPeer(i, nc.raftCluster[i].GetListenerAddr())
 			if err != nil {
-				nc.t.Fatal(err)
+				if nc.t != nil {
+					nc.t.Fatal(err)
+				} else {
+					return
+				}
 			}
 			err = nc.raftCluster[i].ConnectToPeer(id, nc.raftCluster[id].GetListenerAddr())
 			if err != nil {
-				nc.t.Fatal(err)
+				if nc.t != nil {
+					nc.t.Fatal(err)
+				} else {
+					return
+				}
 			}
 		}
 	}
@@ -236,7 +244,11 @@ func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
 						leaderId = int(i)
 						leaderTerm = term
 					} else {
-						nc.t.Fatalf("2 ids: %d, %d think they are leaders", leaderId, i)
+						if nc.t != nil {
+							nc.t.Fatalf("2 ids: %d, %d think they are leaders", leaderId, i)
+						} else {
+							return -1, -1
+						}
 					}
 				}
 			}
@@ -247,7 +259,9 @@ func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
 		time.Sleep(150 * time.Millisecond)
 	}
 
-	nc.t.Fatalf("no leader found")
+	if nc.t != nil {
+		nc.t.Fatalf("no leader found")
+	}
 	return -1, -1
 }
 
@@ -257,7 +271,11 @@ func (nc *ClusterSimulator) CheckNoLeader() {
 	for i := uint64(0); i < nc.n; i++ {
 		if nc.isConnected[i] {
 			if _, _, isLeader := nc.raftCluster[i].rn.Report(); isLeader {
-				nc.t.Fatalf("%d is Leader, expected no leader", i)
+				if nc.t != nil {
+					nc.t.Fatalf("%d is Leader, expected no leader", i)
+				} else {
+					return
+				}
 			}
 		}
 	}
@@ -274,7 +292,11 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 			if commitsLen >= 0 {
 				// If this was set already, expect the new length to be the same.
 				if len(nc.commits[i]) != commitsLen {
-					nc.t.Fatalf("commits[%d] = %d, commitsLen = %d", i, nc.commits[i], commitsLen)
+					if nc.t != nil {
+						nc.t.Fatalf("commits[%d] = %d, commitsLen = %d", i, nc.commits[i], commitsLen)
+					} else {
+						return -1, -1
+					}
 				}
 			} else {
 				commitsLen = len(nc.commits[i])
@@ -291,7 +313,9 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 				cmdOfN := nc.commits[i][c].Command.(int)
 				if cmdAtC >= 0 {
 					if cmdOfN != cmdAtC {
-						nc.t.Errorf("got %d, want %d at nc.commits[%d][%d]", cmdOfN, cmdAtC, i, c)
+						if nc.t != nil {
+							nc.t.Errorf("got %d, want %d at nc.commits[%d][%d]", cmdOfN, cmdAtC, i, c)
+						}
 					}
 				} else {
 					cmdAtC = cmdOfN
@@ -305,7 +329,9 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 			for i := uint64(0); i < nc.n; i++ {
 				if nc.isConnected[i] {
 					if index >= 0 && int(nc.commits[i][c].Index) != index {
-						nc.t.Errorf("got Index=%d, want %d at h.commits[%d][%d]", nc.commits[i][c].Index, index, i, c)
+						if nc.t != nil {
+							nc.t.Errorf("got Index=%d, want %d at h.commits[%d][%d]", nc.commits[i][c].Index, index, i, c)
+						}
 					} else {
 						index = int(nc.commits[i][c].Index)
 					}
@@ -319,7 +345,9 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 	// If there's no early return, we haven't found the command we were looking for
 
 	if choice == TestCommitFunction {
-		nc.t.Errorf("cmd = %d not found in commits", cmd)
+		if nc.t != nil {
+			nc.t.Errorf("cmd = %d not found in commits", cmd)
+		}
 		return 0, -1
 	} else {
 		return 0, -1
@@ -361,6 +389,8 @@ func (nc *ClusterSimulator) ConfigChange(configNew Config) {
 }
 
 func logtest(id uint64, logstr string, a ...interface{}) {
-	logstr = "[" + strconv.Itoa(int(id)) + "] " + "[TEST]" + logstr
-	log.Printf(logstr, a...)
+	if DEBUG > 0 {
+		logstr = "[" + strconv.Itoa(int(id)) + "] " + "[TEST]" + logstr
+		log.Printf(logstr, a...)
+	}
 }
