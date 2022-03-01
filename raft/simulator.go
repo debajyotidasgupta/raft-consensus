@@ -1,6 +1,8 @@
 package raft
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"log"
 	"math/rand"
@@ -141,6 +143,20 @@ func (nc *ClusterSimulator) collectCommits(i uint64) {
 	for commit := range nc.commitChans[i] {
 		nc.mu.Lock()
 		logtest(i, "collectCommits (%d) got %+v", i, commit)
+		switch v := commit.Command.(type) {
+		case Read:
+			break
+		case Write:
+			var buf bytes.Buffer        // Buffer to hold the data
+			enc := gob.NewEncoder(&buf) // Create a new encoder
+
+			if err := enc.Encode(v.Val); err != nil { // Encode the data
+				return
+			}
+			nc.dbCluster[i].Set(v.Key, buf.Bytes()) // Save the data to the database
+		default:
+			break
+		}
 		nc.commits[i] = append(nc.commits[i], commit)
 		nc.mu.Unlock()
 	}
@@ -355,8 +371,8 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 
 }
 
-func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}, reply ...interface{}) bool {
-	return nc.raftCluster[serverId].rn.Submit(cmd, reply)
+func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool, interface{}) {
+	return nc.raftCluster[serverId].rn.Submit(cmd)
 }
 
 //PART OF CONFIGURATION CHANGE

@@ -37,6 +37,7 @@ func main() {
 	fmt.Println("8-> check leader				_")
 	fmt.Println("9-> stop execution				_")
 	gob.Register(raft.Write{})
+	gob.Register(raft.Read{})
 	for {
 		fmt.Println("WAITING FOR INPUTS..")
 		reader := bufio.NewReader(os.Stdin)
@@ -91,7 +92,7 @@ func main() {
 					break
 				}
 			}
-			if cluster.SubmitToServer(serverId, commandToServer) {
+			if success, _ := cluster.SubmitToServer(serverId, commandToServer); success {
 				fmt.Printf("WRITE TO KEY %s WITH VALUE %d SUCCESSFUL\n", tokens[1], val)
 			} else {
 				fmt.Println("Command could not be submitted. Try different server")
@@ -120,9 +121,9 @@ func main() {
 					break
 				}
 			}
-			var reply int
-			if cluster.SubmitToServer(serverId, commandToServer, reply) {
-				fmt.Printf("READ KEY %s VALUE %d\n", tokens[1], reply)
+			if success, reply := cluster.SubmitToServer(serverId, commandToServer); success {
+				value, _ := reply.(int)
+				fmt.Printf("READ KEY %s VALUE %d\n", tokens[1], value)
 			} else {
 				fmt.Println("Command could not be submitted. Try different server")
 			}
@@ -181,14 +182,13 @@ func main() {
 			}
 			cluster.Shutdown()
 			fmt.Println("ALL SERVERS STOPPED AND RAFT SERVICE STOPPED")
+			cluster = nil
 		case 8:
 			if cluster == nil {
 				fmt.Println("Raft cluster not created")
 				break
 			}
-			fmt.Println("Pak")
 			leaderId, term := cluster.CheckUniqueLeader()
-			fmt.Println("Chi")
 			if leaderId < 0 {
 				fmt.Println("No leader yet :(")
 			} else {

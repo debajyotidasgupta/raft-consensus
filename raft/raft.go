@@ -150,40 +150,6 @@ func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready 
 	return node
 }
 
-func (rn *RaftNode) writeToStorage(key string, value int) error {
-	var buf bytes.Buffer        // Buffer to hold the data
-	enc := gob.NewEncoder(&buf) // Create a new encoder
-
-	if err := enc.Encode(value); err != nil { // Encode the data
-		return err
-	}
-	rn.db.Set(key, buf.Bytes()) // Save the data to the database
-	return nil
-}
-
-func (rn *RaftNode) readFromStorage(key string, reply interface{}) error {
-	if value, found := rn.db.Get(key); found {
-		// If the data is found in the database, decode it
-		dec := gob.NewDecoder(bytes.NewBuffer(value)) // Create a new decoder
-		if err := dec.Decode(reply); err != nil {     // Decode the data
-			return err
-		}
-		return nil
-	} else {
-		err := fmt.Errorf("KeyNotFound:%v", key)
-		return err
-	}
-}
-
-func (rn *RaftNode) ApplyCommit(command interface{}) error {
-	switch v := command.(type) {
-	case Write:
-		return rn.writeToStorage(v.Key, int(v.Val))
-	default:
-		return nil
-	}
-}
-
 // sendCommit  sends  committed  entries on commit channel.  It watches
 // newCommitReady  for  notifications  and calculates which new entries
 // are ready to be sent. This method should run in background goroutine
@@ -815,6 +781,20 @@ func (rn *RaftNode) restoreFromStorage() {
 	}
 }
 
+func (rn *RaftNode) readFromStorage(key string, reply interface{}) error {
+	if value, found := rn.db.Get(key); found {
+		// If the data is found in the database, decode it
+		dec := gob.NewDecoder(bytes.NewBuffer(value)) // Create a new decoder
+		if err := dec.Decode(reply); err != nil {     // Decode the data
+			return err
+		}
+		return nil
+	} else {
+		err := fmt.Errorf("KeyNotFound:%v", key)
+		return err
+	}
+}
+
 // Submit submits a new command from the client to  the RaftNode.  This
 // function doesn't block; clients read the commit  channel  passed  in
 // the constructor to be notified of new committed entries. It  returns
@@ -822,7 +802,7 @@ func (rn *RaftNode) restoreFromStorage() {
 // accepted.  If  false  is  returned,  the  client will have to find a
 // different RaftNode to submit this command to.
 
-func (rn *RaftNode) Submit(command interface{}, reply ...interface{}) bool {
+func (rn *RaftNode) Submit(command interface{}) (bool, interface{}) {
 	rn.mu.Lock() // Lock the mutex
 	rn.debug("Submit received by %v: %v", rn.state, command)
 
@@ -831,25 +811,22 @@ func (rn *RaftNode) Submit(command interface{}, reply ...interface{}) bool {
 		switch v := command.(type) {
 		case Read:
 			key := v.Key
-			if len(reply) > 0 {
-				rn.readFromStorage(key, reply[0])
-			} else {
-				var value *int
-				rn.readFromStorage(key, value)
-			}
-			return true
+			var value int
+			rn.readFromStorage(key, &value)
+			rn.mu.Unlock()
+			return true, value
 		default:
 			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
 			rn.persistToStorage()                                                     // Persist the log to storage
 			rn.debug("log=%v", rn.log)                                                // Debug the log state
 			rn.mu.Unlock()                                                            // Unlock the mutex before returning
 			rn.trigger <- struct{}{}                                                  // Trigger the event for append entries
-			return true                                                               // Return true since we are the leader
+			return true, nil                                                          // Return true since we are the leader
 		}
 	}
 
 	rn.mu.Unlock() // Unlock the mutex
-	return false
+	return false, nil
 }
 
 // Stop stops this RaftNode, cleaning up  its  state.  This  method
