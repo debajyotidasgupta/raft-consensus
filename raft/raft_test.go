@@ -337,7 +337,7 @@ func TestCommitOneCommand(t *testing.T) {
 	origLeaderId, _ := cs.CheckUniqueLeader()
 
 	logtest(uint64(origLeaderId), "submitting 42 to %d", origLeaderId)
-	isLeader, _ := cs.SubmitToServer(origLeaderId, 42)
+	isLeader, _, _ := cs.SubmitToServer(origLeaderId, 42)
 	if !isLeader {
 		t.Errorf("want id=%d leader, but it's not", origLeaderId)
 	}
@@ -361,7 +361,7 @@ func TestElectionFollowerDisconnectReconnectAfterLongCommitDone(t *testing.T) {
 	cs.DisconnectPeer(uint64(follower))
 
 	logtest(uint64(initialLeader), "submitting 42 to %d", initialLeader)
-	isLeader, _ := cs.SubmitToServer(initialLeader, 42)
+	isLeader, _, _ := cs.SubmitToServer(initialLeader, 42)
 	if !isLeader {
 		t.Errorf("want id=%d leader, but it's not", initialLeader)
 	}
@@ -389,7 +389,7 @@ func TestTryCommitToNonLeader(t *testing.T) {
 	leaderId, _ := cs.CheckUniqueLeader()
 	servingId := (leaderId + 1) % 3
 	logtest(uint64(servingId), "submitting 42 to %d", servingId)
-	isLeader, _ := cs.SubmitToServer(servingId, 42)
+	isLeader, _, _ := cs.SubmitToServer(servingId, 42)
 	if isLeader {
 		t.Errorf("want id=%d to be non leader, but it is", servingId)
 	}
@@ -405,7 +405,7 @@ func TestCommitThenLeaderDisconnect(t *testing.T) {
 	origLeaderId, _ := cs.CheckUniqueLeader()
 
 	logtest(uint64(origLeaderId), "submitting 42 to %d", origLeaderId)
-	isLeader, _ := cs.SubmitToServer(origLeaderId, 42)
+	isLeader, _, _ := cs.SubmitToServer(origLeaderId, 42)
 	if !isLeader {
 		t.Errorf("want id=%d leader, but it's not", origLeaderId)
 	}
@@ -433,7 +433,7 @@ func TestCommitMultipleCommands(t *testing.T) {
 	values := []int{42, 55, 81}
 	for _, v := range values {
 		logtest(uint64(origLeaderId), "submitting %d to %d", v, origLeaderId)
-		isLeader, _ := cs.SubmitToServer(origLeaderId, v)
+		isLeader, _, _ := cs.SubmitToServer(origLeaderId, v)
 		if !isLeader {
 			t.Errorf("want id=%d leader, but it's not", origLeaderId)
 		}

@@ -48,7 +48,7 @@ func SetData(cluster *raft.ClusterSimulator, key string, val int, serverParam ..
 		return errors.New("unable to submit command to any server")
 	}
 	success := false
-	if success, _ = cluster.SubmitToServer(serverId, commandToServer); success {
+	if success, _, _ = cluster.SubmitToServer(serverId, commandToServer); success {
 		return nil
 	} else {
 		return errors.New("command could not be submitted, try different server")
@@ -69,9 +69,13 @@ func GetData(cluster *raft.ClusterSimulator, key string, serverParam ...int) (in
 	if serverId < 0 {
 		return 0, errors.New("unable to submit command to any server")
 	}
-	if success, reply := cluster.SubmitToServer(serverId, commandToServer); success {
-		value, _ := reply.(int)
-		return value, nil
+	if success, reply, err := cluster.SubmitToServer(serverId, commandToServer); success {
+		if err != nil {
+			return -1, err
+		} else {
+			value, _ := reply.(int)
+			return value, nil
+		}
 	} else {
 		return 0, errors.New("command could not be submitted, try different server")
 	}

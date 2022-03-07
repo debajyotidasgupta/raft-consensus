@@ -802,7 +802,7 @@ func (rn *RaftNode) readFromStorage(key string, reply interface{}) error {
 // accepted.  If  false  is  returned,  the  client will have to find a
 // different RaftNode to submit this command to.
 
-func (rn *RaftNode) Submit(command interface{}) (bool, interface{}) {
+func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 	rn.mu.Lock() // Lock the mutex
 	rn.debug("Submit received by %v: %v", rn.state, command)
 
@@ -813,23 +813,20 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}) {
 			key := v.Key
 			var value int
 			readErr := rn.readFromStorage(key, &value)
-			if readErr != nil {
-				value = math.MinInt
-			}
 			rn.mu.Unlock()
-			return true, value
+			return true, value, readErr
 		default:
 			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
 			rn.persistToStorage()                                                     // Persist the log to storage
 			rn.debug("log=%v", rn.log)                                                // Debug the log state
 			rn.mu.Unlock()                                                            // Unlock the mutex before returning
 			rn.trigger <- struct{}{}                                                  // Trigger the event for append entries
-			return true, nil                                                          // Return true since we are the leader
+			return true, nil, nil                                                     // Return true since we are the leader
 		}
 	}
 
 	rn.mu.Unlock() // Unlock the mutex
-	return false, nil
+	return false, nil, nil
 }
 
 // Stop stops this RaftNode, cleaning up  its  state.  This  method

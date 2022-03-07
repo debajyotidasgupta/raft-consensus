@@ -371,7 +371,7 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 
 }
 
-func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool, interface{}) {
+func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool, interface{}, error) {
 	return nc.raftCluster[serverId].rn.Submit(cmd)
 }
 
