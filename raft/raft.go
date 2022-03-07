@@ -812,7 +812,10 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}) {
 		case Read:
 			key := v.Key
 			var value int
-			rn.readFromStorage(key, &value)
+			readErr := rn.readFromStorage(key, &value)
+			if readErr != nil {
+				value = math.MinInt
+			}
 			rn.mu.Unlock()
 			return true, value
 		default:
