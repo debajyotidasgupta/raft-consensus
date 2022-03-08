@@ -69,7 +69,7 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 
 	for i := uint64(0); i < n; i++ {
 		peerIds := make([]uint64, 0)
-
+		peerList := makeSet()
 		// get PeerIDs for server i
 		for j := uint64(0); j < n; j++ {
 			if i == j {
@@ -78,10 +78,18 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 				peerIds = append(peerIds, j)
 			}
 		}
+		// get PeerList for server i
+		for j := uint64(0); j < n; j++ {
+			if i == j {
+				continue
+			} else {
+				peerList.Add(j)
+			}
+		}
 
 		storage[i] = NewDatabase()
 		commitChans[i] = make(chan CommitEntry)
-		serverList[i] = CreateServer(i, peerIds, storage[i], ready, commitChans[i])
+		serverList[i] = CreateServer(i, peerIds, peerList, storage[i], ready, commitChans[i])
 
 		serverList[i].Serve()
 		isAlive[i] = true
@@ -226,18 +234,19 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) {
 	logtest(id, "Restart ", id, id)
 
 	peerIds := make([]uint64, 0)
-
+	peerList := makeSet()
 	for i := uint64(0); i < nc.n; i++ {
 		if id == i {
 			continue
 		} else {
 			peerIds = append(peerIds, i)
+			peerList.Add(i)
 		}
 	}
 
 	ready := make(chan interface{})
 
-	nc.raftCluster[id] = CreateServer(id, peerIds, nc.dbCluster[id], ready, nc.commitChans[id])
+	nc.raftCluster[id] = CreateServer(id, peerIds, peerList, nc.dbCluster[id], ready, nc.commitChans[id])
 	nc.raftCluster[id].Serve()
 	nc.ReconnectPeer(id)
 

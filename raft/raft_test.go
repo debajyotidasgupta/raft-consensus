@@ -75,6 +75,7 @@ func TestServerClient(t *testing.T) {
 
 	for i := uint64(1); i <= numPeers; i++ {
 		peerIds := make([]uint64, numPeers-1)
+		peerList := makeSet()
 		j := 0
 		for peerId := uint64(1); peerId <= numPeers; peerId++ {
 			if peerId != i {
@@ -87,7 +88,7 @@ func TestServerClient(t *testing.T) {
 		ready := make(chan interface{})
 		commitChan := make(chan CommitEntry)
 
-		s := CreateServer(i, peerIds, db, ready, commitChan)
+		s := CreateServer(i, peerIds, peerList, db, ready, commitChan)
 		if s == nil {
 			t.Errorf("ERROR: server could not be created")
 		}
