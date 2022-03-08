@@ -62,10 +62,9 @@ func (c *Set) Size() int {
 }
 
 type RaftNode struct {
-	id             uint64     // id is the id of the Raft node
-	mu             sync.Mutex // Mutex protects the Raft node
-	peers          []uint64   // Peer is the list of peers in the Raft cluster
-	peerList       Set
+	id             uint64           // id is the id of the Raft node
+	mu             sync.Mutex       // Mutex protects the Raft node
+	peerList       Set              // Peer is the list of peers in the Raft cluster
 	server         *Server          // Server is the server of the Raft node. Issue RPCs to the peers
 	db             *Database        // Database is the storage of the Raft node
 	commitChan     chan CommitEntry // CommitChan is the channel the channel where this Raft Node is going to report committed log entries
@@ -138,11 +137,10 @@ func (rn *RaftNode) debug(format string, args ...interface{}) {
 // notify the caller that the peers have been initialized and the Raft
 // node is ready to be started.
 
-func NewRaftNode(id uint64, peers []uint64, peerList Set, server *Server, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *RaftNode {
+func NewRaftNode(id uint64, peerList Set, server *Server, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *RaftNode {
 	node := &RaftNode{
-		id:                 id,    // id is the id of the Raft node
-		peers:              peers, // Peer is the list of peers in the Raft cluster
-		peerList:           peerList,
+		id:                 id,                      // id is the id of the Raft node
+		peerList:           peerList,                // List of peers of this Raft node
 		server:             server,                  // Server is the server of the Raft node. Issue RPCs to the peers
 		db:                 db,                      // Database is the storage of the Raft node
 		commitChan:         commitChan,              // CommitChan is the channel the channel where this Raft Node is going to report committed log entries

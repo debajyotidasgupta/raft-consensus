@@ -31,7 +31,12 @@ type ClusterSimulator struct {
 
 	isConnected []bool // check if node i is connected to cluster
 
-	isAlive       []bool // check if node is alive
+	isAlive []bool // check if node is alive
+	/*
+	*Now that servers can leave/enter, the cluster must have
+	*info of all servers in the cluster, which is stored in
+	*activeServers
+	 */
 	activeServers Set    // set of all servers currently in the cluster
 	n             uint64 // number of servers
 	t             *testing.T
@@ -68,16 +73,8 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	// creating servers
 
 	for i := uint64(0); i < n; i++ {
-		peerIds := make([]uint64, 0)
 		peerList := makeSet()
-		// get PeerIDs for server i
-		for j := uint64(0); j < n; j++ {
-			if i == j {
-				continue
-			} else {
-				peerIds = append(peerIds, j)
-			}
-		}
+
 		// get PeerList for server i
 		for j := uint64(0); j < n; j++ {
 			if i == j {
@@ -89,7 +86,7 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 
 		storage[i] = NewDatabase()
 		commitChans[i] = make(chan CommitEntry)
-		serverList[i] = CreateServer(i, peerIds, peerList, storage[i], ready, commitChans[i])
+		serverList[i] = CreateServer(i, peerList, storage[i], ready, commitChans[i])
 
 		serverList[i].Serve()
 		isAlive[i] = true
@@ -238,20 +235,18 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) {
 	}
 	logtest(id, "Restart ", id, id)
 
-	peerIds := make([]uint64, 0)
 	peerList := makeSet()
 	for i := range nc.activeServers.peerSet {
 		if id == i {
 			continue
 		} else {
-			peerIds = append(peerIds, i)
 			peerList.Add(i)
 		}
 	}
 
 	ready := make(chan interface{})
 
-	nc.raftCluster[id] = CreateServer(id, peerIds, peerList, nc.dbCluster[id], ready, nc.commitChans[id])
+	nc.raftCluster[id] = CreateServer(id, peerList, nc.dbCluster[id], ready, nc.commitChans[id])
 	nc.raftCluster[id].Serve()
 	nc.ReconnectPeer(id)
 
