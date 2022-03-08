@@ -31,10 +31,10 @@ type ClusterSimulator struct {
 
 	isConnected []bool // check if node i is connected to cluster
 
-	isAlive []bool // check if node is alive
-
-	n uint64 // number of servers
-	t *testing.T
+	isAlive       []bool // check if node is alive
+	activeServers Set    // set of all servers currently in the cluster
+	n             uint64 // number of servers
+	t             *testing.T
 }
 
 type CommitFunctionType int
@@ -64,7 +64,7 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	commits := make([][]CommitEntry, n)
 	ready := make(chan interface{})
 	storage := make([]*Database, n)
-
+	activeServers := makeSet()
 	// creating servers
 
 	for i := uint64(0); i < n; i++ {
@@ -106,18 +106,22 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 		isConnected[i] = true
 	}
 
+	for i := uint64(0); i < n; i++ {
+		activeServers.Add(i)
+	}
 	close(ready)
 
 	// create a new cluster
 	newCluster := &ClusterSimulator{
-		raftCluster: serverList,
-		dbCluster:   storage,
-		commitChans: commitChans,
-		commits:     commits,
-		isConnected: isConnected,
-		isAlive:     isAlive,
-		n:           n,
-		t:           t,
+		raftCluster:   serverList,
+		dbCluster:     storage,
+		commitChans:   commitChans,
+		commits:       commits,
+		isConnected:   isConnected,
+		isAlive:       isAlive,
+		n:             n,
+		activeServers: activeServers,
+		t:             t,
 	}
 
 	for i := uint64(0); i < n; i++ {
@@ -129,19 +133,20 @@ func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 
 // Shut down all servers in the cluster
 func (nc *ClusterSimulator) Shutdown() {
-	for i := uint64(0); i < nc.n; i++ {
+
+	for i := range nc.activeServers.peerSet {
 		nc.raftCluster[i].DisconnectAll()
 		nc.isConnected[i] = false
 	}
 
-	for i := uint64(0); i < nc.n; i++ {
+	for i := range nc.activeServers.peerSet {
 		if nc.isAlive[i] {
 			nc.isAlive[i] = false
 			nc.raftCluster[i].Stop()
 		}
 	}
 
-	for i := uint64(0); i < nc.n; i++ {
+	for i := range nc.activeServers.peerSet {
 		close(nc.commitChans[i])
 	}
 }
@@ -175,7 +180,7 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 	logtest(id, "Disconnect %d", id)
 
 	nc.raftCluster[id].DisconnectAll()
-	for i := uint64(0); i < nc.n; i++ {
+	for i := range nc.activeServers.peerSet {
 		if i == id {
 			continue
 		} else {
@@ -189,7 +194,7 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 	logtest(id, "Reconnect %d", id)
 
-	for i := uint64(0); i < nc.n; i++ {
+	for i := range nc.activeServers.peerSet {
 		if i != id && nc.isAlive[i] {
 			err := nc.raftCluster[id].ConnectToPeer(i, nc.raftCluster[i].GetListenerAddr())
 			if err != nil {
@@ -235,7 +240,7 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) {
 
 	peerIds := make([]uint64, 0)
 	peerList := makeSet()
-	for i := uint64(0); i < nc.n; i++ {
+	for i := range nc.activeServers.peerSet {
 		if id == i {
 			continue
 		} else {
@@ -261,7 +266,7 @@ func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
 		leaderId := -1
 		leaderTerm := -1
 
-		for i := uint64(0); i < nc.n; i++ {
+		for i := range nc.activeServers.peerSet {
 			if nc.isConnected[i] {
 				_, term, isLeader := nc.raftCluster[i].rn.Report()
 				if isLeader {
@@ -293,7 +298,7 @@ func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
 // check if there are no leaders
 func (nc *ClusterSimulator) CheckNoLeader() {
 
-	for i := uint64(0); i < nc.n; i++ {
+	for i := range nc.activeServers.peerSet {
 		if nc.isConnected[i] {
 			if _, _, isLeader := nc.raftCluster[i].rn.Report(); isLeader {
 				if nc.t != nil {
@@ -312,7 +317,7 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 
 	// Find the length of the commits slice for connected servers.
 	commitsLen := -1
-	for i := uint64(0); i < nc.n; i++ {
+	for i := range nc.activeServers.peerSet {
 		if nc.isConnected[i] {
 			if commitsLen >= 0 {
 				// If this was set already, expect the new length to be the same.
