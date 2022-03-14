@@ -1,11 +1,34 @@
 package raft
 
-type Configuration struct {
-	///peerIds []uint64
+import "fmt"
+
+// Basic Data Structure and Associated operations to
+// Maintain cluster configuration
+
+// Set implementation from https://golangbyexample.com/set-implementation-in-golang/
+type Set struct {
+	peerSet map[uint64]struct{}
 }
 
-// As per paper, new configuration request first goes to leader
-// Say a new node gets added to the cluster
-// Should all nodes connect to this node and vice versa
-// before the configuration change request goes to the leader?
-// or connection can happen at any point of time?
+func makeSet() Set {
+	return Set{
+		peerSet: make(map[uint64]struct{}),
+	}
+}
+
+func (c *Set) Add(key uint64) {
+	c.peerSet[key] = struct{}{}
+}
+
+func (c *Set) Remove(key uint64) error {
+	_, exists := c.peerSet[key]
+	if !exists {
+		return fmt.Errorf("Remove Error: Item doesn't exist in set")
+	}
+	delete(c.peerSet, key)
+	return nil
+}
+
+func (c *Set) Size() int {
+	return len(c.peerSet)
+}
