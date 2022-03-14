@@ -177,7 +177,7 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 	logtest(id, "Disconnect %d", id)
 
 	nc.raftCluster[id].DisconnectAll()
-	for i := range nc.activeServers.peerSet {
+	for i := range nc.raftCluster[id].peerList.peerSet {
 		if i == id {
 			continue
 		} else {
@@ -191,7 +191,7 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 	logtest(id, "Reconnect %d", id)
 
-	for i := range nc.activeServers.peerSet {
+	for i := range nc.raftCluster[id].peerList.peerSet {
 		if i != id && nc.isAlive[i] {
 			err := nc.raftCluster[id].ConnectToPeer(i, nc.raftCluster[i].GetListenerAddr())
 			if err != nil {
@@ -236,7 +236,7 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) {
 	logtest(id, "Restart ", id, id)
 
 	peerList := makeSet()
-	for i := range nc.activeServers.peerSet {
+	for i := range nc.raftCluster[id].peerList.peerSet {
 		if id == i {
 			continue
 		} else {
