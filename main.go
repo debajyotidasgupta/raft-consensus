@@ -156,7 +156,7 @@ func Stop(cluster *raft.ClusterSimulator) error {
 }
 
 func PrintMenu() {
-	fmt.Println("\n           RAFT MENU: [nodes are 0 indexed]")
+	fmt.Println("\n\n           RAFT MENU: [nodes are 0 indexed]")
 	fmt.Println("+---------------------------+---------------------------+")
 	fmt.Println("| Sr |  USER COMMANDS       |      ARGUMENTS            |")
 	fmt.Println("+----+----------------------+---------------------------+")
@@ -172,6 +172,8 @@ func PrintMenu() {
 	fmt.Println("| 10 | stop execution       |      _                    |")
 	fmt.Println("+----+----------------------+---------------------------+")
 	fmt.Println("")
+	fmt.Println("+-----------------      USER      ----------------------+")
+	fmt.Println("")
 }
 
 func main() {
@@ -186,6 +188,8 @@ func main() {
 
 	for {
 		fmt.Println("WAITING FOR INPUTS..")
+		fmt.Println("")
+
 		reader := bufio.NewReader(os.Stdin)
 		input, _ = reader.ReadString('\n')
 		tokens := strings.Fields(input)
@@ -354,6 +358,7 @@ func main() {
 		default:
 			fmt.Println("Invalid Command")
 		}
+		fmt.Println("\n---------------------------------------------------------")
 		PrintMenu()
 	}
 }
