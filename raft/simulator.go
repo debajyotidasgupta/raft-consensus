@@ -3,7 +3,6 @@ package raft
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -15,7 +14,10 @@ import (
 func init() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 	seed := time.Now().UnixNano()
-	fmt.Println("Seed: ", seed)
+
+	// Uncomment this line to see the values of the seed
+	// fmt.Println("Seed: ", seed)
+
 	rand.Seed(seed)
 }
 

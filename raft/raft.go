@@ -14,7 +14,7 @@ import (
 
 type RNState int // RNState is the state of the Raft node
 
-const DEBUG = 0 // DEBUG is the debug level
+const DEBUG = 1 // DEBUG is the debug level
 const (
 	Follower  RNState = iota // Follower is the state of a Raft node that is a follower
 	Candidate                // Candidate is the state of a Raft node that is a candidate
