@@ -3,6 +3,7 @@ package raft
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -815,6 +816,19 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 			readErr := rn.readFromStorage(key, &value)
 			rn.mu.Unlock()
 			return true, value, readErr
+		case AddServers:
+			serverIds := v.ServerIds
+			for i := 0; i < len(serverIds); i++ {
+				if rn.peerList.Exists(uint64(serverIds[i])) {
+					return false, nil, errors.New("server with given serverID already exists")
+				}
+			}
+			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
+			rn.persistToStorage()                                                     // Persist the log to storage
+			rn.debug("log=%v", rn.log)                                                // Debug the log state
+			rn.mu.Unlock()                                                            // Unlock the mutex before returning
+			rn.trigger <- struct{}{}                                                  // Trigger the event for append entries
+			return true, nil, nil                                                     // Return true since we are the leader
 		default:
 			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
 			rn.persistToStorage()                                                     // Persist the log to storage

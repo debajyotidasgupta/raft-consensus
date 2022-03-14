@@ -58,6 +58,14 @@ type Read struct {
 	Key string
 }
 
+type AddServers struct {
+	ServerIds []int
+}
+
+type RemoveServers struct {
+	ServerIds []int
+}
+
 // Create a new ClusterSimulator
 func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	// initialising required fields of ClusterSimulator

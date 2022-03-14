@@ -16,6 +16,11 @@ func makeSet() Set {
 	}
 }
 
+func (c *Set) Exists(key uint64) bool {
+	_, exists := c.peerSet[key]
+	return exists
+}
+
 func (c *Set) Add(key uint64) {
 	c.peerSet[key] = struct{}{}
 }
