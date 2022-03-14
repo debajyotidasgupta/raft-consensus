@@ -119,12 +119,12 @@ func TestElectionLeaderDisconnect(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	initialLeader, initialLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	cs.DisconnectPeer(uint64(initialLeader))
 	time.Sleep(300 * time.Millisecond)
 
-	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+	newLeader, newLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if newLeader == initialLeader {
 		t.Errorf("new leader expected to be different from initial leader")
@@ -140,7 +140,7 @@ func TestElectionLeaderAndFollowerDisconnect(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	initialLeader, _ := cs.CheckUniqueLeader()
+	initialLeader, _, _ := cs.CheckUniqueLeader()
 	cs.DisconnectPeer(uint64(initialLeader))
 	follower := (initialLeader + 1) % 3
 	cs.DisconnectPeer(uint64(follower))
@@ -160,11 +160,11 @@ func TestElectionLeaderDisconnectAndReconnect(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	initialLeader, initialLeaderTerm, _ := cs.CheckUniqueLeader()
 	cs.DisconnectPeer(uint64(initialLeader))
 	time.Sleep(300 * time.Millisecond)
 
-	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+	newLeader, newLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if newLeader == initialLeader {
 		t.Errorf("new leader expected to be different from initial leader")
@@ -178,7 +178,7 @@ func TestElectionLeaderDisconnectAndReconnect(t *testing.T) {
 	cs.ReconnectPeer(uint64(initialLeader))
 	time.Sleep(300 * time.Millisecond)
 
-	latestLeader, latestLeaderTerm := cs.CheckUniqueLeader()
+	latestLeader, latestLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if latestLeader != newLeader {
 		t.Errorf("latest leader expected to be %d, got %d", newLeader, latestLeader)
@@ -216,11 +216,11 @@ func TestElectionLeaderDisconnectAndReconnect5Nodes(t *testing.T) {
 	cs := CreateNewCluster(t, 5)
 	defer cs.Shutdown()
 
-	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	initialLeader, initialLeaderTerm, _ := cs.CheckUniqueLeader()
 	cs.DisconnectPeer(uint64(initialLeader))
 	time.Sleep(300 * time.Millisecond)
 
-	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+	newLeader, newLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if newLeader == initialLeader {
 		t.Errorf("new leader expected to be different from initial leader")
@@ -234,7 +234,7 @@ func TestElectionLeaderDisconnectAndReconnect5Nodes(t *testing.T) {
 	cs.ReconnectPeer(uint64(initialLeader))
 	time.Sleep(300 * time.Millisecond)
 
-	latestLeader, latestLeaderTerm := cs.CheckUniqueLeader()
+	latestLeader, latestLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if latestLeader != newLeader {
 		t.Errorf("latest leader expected to be %d, got %d", newLeader, latestLeader)
@@ -250,7 +250,7 @@ func TestElectionFollowerDisconnectAndReconnect(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	initialLeader, initialLeaderTerm, _ := cs.CheckUniqueLeader()
 	follower := (initialLeader + 1) % 3
 	cs.DisconnectPeer(uint64(follower))
 
@@ -258,7 +258,7 @@ func TestElectionFollowerDisconnectAndReconnect(t *testing.T) {
 
 	cs.ReconnectPeer(uint64(follower))
 	time.Sleep(100 * time.Millisecond)
-	_, newLeaderTerm := cs.CheckUniqueLeader()
+	_, newLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if newLeaderTerm <= initialLeaderTerm {
 		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
@@ -274,7 +274,7 @@ func TestElectionDisconnectReconnectLoop(t *testing.T) {
 	var term = 0
 
 	for i := 0; i < 6; i++ {
-		leader, newTerm := cs.CheckUniqueLeader()
+		leader, newTerm, _ := cs.CheckUniqueLeader()
 
 		if newTerm <= term {
 			t.Errorf("new leader term expected to be > old leader term, new term=%d old term=%d", newTerm, term)
@@ -293,7 +293,7 @@ func TestElectionDisconnectReconnectLoop(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	_, newTerm := cs.CheckUniqueLeader()
+	_, newTerm, _ := cs.CheckUniqueLeader()
 
 	if newTerm <= term {
 		t.Errorf("new leader term expected to be > old leader term, new term=%d old term=%d", newTerm, term)
@@ -307,7 +307,7 @@ func TestElectionFollowerDisconnectReconnectAfterLong(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	initialLeader, initialLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	follower := (initialLeader + 1) % 3
 	cs.DisconnectPeer(uint64(follower))
@@ -317,7 +317,7 @@ func TestElectionFollowerDisconnectReconnectAfterLong(t *testing.T) {
 	cs.ReconnectPeer(uint64(follower))
 
 	time.Sleep(500 * time.Millisecond)
-	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+	newLeader, newLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if newLeaderTerm <= initialLeaderTerm {
 		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
@@ -334,7 +334,7 @@ func TestCommitOneCommand(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 
 	logtest(uint64(origLeaderId), "submitting 42 to %d", origLeaderId)
 	isLeader, _, _ := cs.SubmitToServer(origLeaderId, 42)
@@ -343,7 +343,7 @@ func TestCommitOneCommand(t *testing.T) {
 	}
 
 	time.Sleep(time.Duration(250) * time.Millisecond)
-	num, _ := cs.CheckCommitted(42, 0)
+	num, _, _ := cs.CheckCommitted(42, 0)
 	if num != 3 {
 		t.Errorf("Not committed by 3 nodes")
 	}
@@ -355,7 +355,7 @@ func TestElectionFollowerDisconnectReconnectAfterLongCommitDone(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	initialLeader, initialLeaderTerm := cs.CheckUniqueLeader()
+	initialLeader, initialLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	follower := (initialLeader + 1) % 3
 	cs.DisconnectPeer(uint64(follower))
@@ -371,7 +371,7 @@ func TestElectionFollowerDisconnectReconnectAfterLongCommitDone(t *testing.T) {
 	cs.ReconnectPeer(uint64(follower))
 
 	time.Sleep(500 * time.Millisecond)
-	newLeader, newLeaderTerm := cs.CheckUniqueLeader()
+	newLeader, newLeaderTerm, _ := cs.CheckUniqueLeader()
 
 	if newLeaderTerm <= initialLeaderTerm {
 		t.Errorf("new leader term expected to be > initial leader term, new term=%d old term=%d", newLeaderTerm, initialLeaderTerm)
@@ -386,7 +386,7 @@ func TestTryCommitToNonLeader(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	leaderId, _ := cs.CheckUniqueLeader()
+	leaderId, _, _ := cs.CheckUniqueLeader()
 	servingId := (leaderId + 1) % 3
 	logtest(uint64(servingId), "submitting 42 to %d", servingId)
 	isLeader, _, _ := cs.SubmitToServer(servingId, 42)
@@ -402,7 +402,7 @@ func TestCommitThenLeaderDisconnect(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 
 	logtest(uint64(origLeaderId), "submitting 42 to %d", origLeaderId)
 	isLeader, _, _ := cs.SubmitToServer(origLeaderId, 42)
@@ -415,7 +415,7 @@ func TestCommitThenLeaderDisconnect(t *testing.T) {
 	cs.DisconnectPeer(uint64(origLeaderId))
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
-	num, _ := cs.CheckCommitted(42, 0)
+	num, _, _ := cs.CheckCommitted(42, 0)
 	if num != 2 {
 		t.Errorf("expected 2 commits found = %d", num)
 	}
@@ -428,7 +428,7 @@ func TestCommitMultipleCommands(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 
 	values := []int{42, 55, 81}
 	for _, v := range values {
@@ -441,9 +441,9 @@ func TestCommitMultipleCommands(t *testing.T) {
 	}
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	com1, i1 := cs.CheckCommitted(42, 0)
-	com2, i2 := cs.CheckCommitted(55, 0)
-	com3, i3 := cs.CheckCommitted(81, 0)
+	com1, i1, _ := cs.CheckCommitted(42, 0)
+	com2, i2, _ := cs.CheckCommitted(55, 0)
+	com3, i3, _ := cs.CheckCommitted(81, 0)
 
 	if com1 != 3 || com2 != 3 || com3 != 3 {
 		t.Errorf("expected com1 = com2 = com3 = 3 found com1 = %d com2 = %d com3 = %d", com1, com2, com3)
@@ -461,12 +461,12 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	defer cs.Shutdown()
 
 	// Submit a couple of values to a fully connected cluster.
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(origLeaderId, 5)
 	cs.SubmitToServer(origLeaderId, 6)
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ := cs.CheckCommitted(6, 0)
+	num, _, _ := cs.CheckCommitted(6, 0)
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
 	}
@@ -478,7 +478,7 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	// Submit a new command; it will be committed but only to two servers.
 	cs.SubmitToServer(origLeaderId, 7)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ = cs.CheckCommitted(7, 0)
+	num, _, _ = cs.CheckCommitted(7, 0)
 	if num != 2 {
 		t.Errorf("expected 2 commits found = %d", num)
 	}
@@ -487,7 +487,7 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ = cs.CheckCommitted(7, 0)
+	num, _, _ = cs.CheckCommitted(7, 0)
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
 	}
@@ -499,11 +499,11 @@ func TestTryCommitMajorityFailure(t *testing.T) {
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(origLeaderId, 5)
 
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num, _ := cs.CheckCommitted(5, 0)
+	num, _, _ := cs.CheckCommitted(5, 0)
 
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
@@ -518,7 +518,7 @@ func TestTryCommitMajorityFailure(t *testing.T) {
 
 	cs.SubmitToServer(origLeaderId, 6)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	numC, _ := cs.CheckCommitted(6, 1)
+	numC, _, _ := cs.CheckCommitted(6, 1)
 
 	if numC != 0 {
 		t.Errorf("expected 0 commits found = %d", numC)
@@ -528,11 +528,11 @@ func TestTryCommitMajorityFailure(t *testing.T) {
 	cs.ReconnectPeer(uint64(dPeer2))
 	time.Sleep(time.Duration(600) * time.Millisecond)
 
-	newLeaderId, _ := cs.CheckUniqueLeader()
+	newLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(newLeaderId, 8)
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
-	numF, _ := cs.CheckCommitted(8, 1)
+	numF, _, _ := cs.CheckCommitted(8, 1)
 	if numF != 3 {
 		t.Errorf("expected 3 commits found = %d", numF)
 	}
@@ -545,7 +545,7 @@ func TestTryCommitToDCLeader(t *testing.T) {
 	cs := CreateNewCluster(t, 5)
 	defer cs.Shutdown()
 
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(origLeaderId, 5)
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
@@ -554,15 +554,15 @@ func TestTryCommitToDCLeader(t *testing.T) {
 	cs.SubmitToServer(origLeaderId, 6)
 	time.Sleep(time.Duration(200) * time.Millisecond)
 
-	num1, _ := cs.CheckCommitted(6, 1)
+	num1, _, _ := cs.CheckCommitted(6, 1)
 	if num1 != 0 {
 		t.Errorf("expected 0 commits found = %d", num1)
 	}
 
-	newLeaderId, _ := cs.CheckUniqueLeader()
+	newLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(newLeaderId, 7)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num2, _ := cs.CheckCommitted(7, 0)
+	num2, _, _ := cs.CheckCommitted(7, 0)
 
 	if num2 != 4 {
 		t.Errorf("expected 4 commits found = %d", num2)
@@ -571,12 +571,12 @@ func TestTryCommitToDCLeader(t *testing.T) {
 	cs.ReconnectPeer(uint64(origLeaderId))
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
-	newLeaderId, _ = cs.CheckUniqueLeader()
+	newLeaderId, _, _ = cs.CheckUniqueLeader()
 	cs.SubmitToServer(newLeaderId, 8)
 	time.Sleep(time.Duration(300) * time.Millisecond)
-	num3, _ := cs.CheckCommitted(7, 0)
-	num4, _ := cs.CheckCommitted(8, 0)
-	num5, _ := cs.CheckCommitted(6, 1)
+	num3, _, _ := cs.CheckCommitted(7, 0)
+	num4, _, _ := cs.CheckCommitted(8, 0)
+	num5, _, _ := cs.CheckCommitted(6, 1)
 	if num3 != 5 || num4 != 5 || num5 != 0 {
 		t.Errorf("expected num3 = num4 = 5 and num5 = 0 found num3= %d num4 = %d num5 = %d", num3, num4, num5)
 	}
@@ -588,14 +588,14 @@ func TestTryCommitLeaderDisconnectsShortTime(t *testing.T) {
 	cs := CreateNewCluster(t, 5)
 	defer cs.Shutdown()
 
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.DisconnectPeer(uint64(origLeaderId))
 	cs.SubmitToServer(origLeaderId, 5)
 	time.Sleep(time.Duration(10) * time.Millisecond)
 	cs.ReconnectPeer(uint64(origLeaderId))
 	time.Sleep(time.Duration(300) * time.Millisecond)
 
-	num, _ := cs.CheckCommitted(5, 0)
+	num, _, _ := cs.CheckCommitted(5, 0)
 
 	if num != 5 {
 		t.Errorf("expected commits = 5 found = %d", num)
@@ -608,7 +608,7 @@ func TestCrashFollowerThenLeader(t *testing.T) {
 	cs := CreateNewCluster(t, 5)
 	defer cs.Shutdown()
 
-	origLeaderId, _ := cs.CheckUniqueLeader()
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(origLeaderId, 25)
 	cs.SubmitToServer(origLeaderId, 26)
 	cs.SubmitToServer(origLeaderId, 27)
@@ -620,9 +620,9 @@ func TestCrashFollowerThenLeader(t *testing.T) {
 	cs.CrashPeer(uint64(dPeerID2))
 	time.Sleep(time.Duration(250) * time.Millisecond)
 
-	num1, _ := cs.CheckCommitted(25, 0)
-	num2, _ := cs.CheckCommitted(26, 0)
-	num3, _ := cs.CheckCommitted(27, 0)
+	num1, _, _ := cs.CheckCommitted(25, 0)
+	num2, _, _ := cs.CheckCommitted(26, 0)
+	num3, _, _ := cs.CheckCommitted(27, 0)
 
 	if num1 != 3 || num2 != 3 || num3 != 3 {
 		t.Errorf("expected num1 = num2 = num3 = 3 got num1 = %d num2 = %d num3 = %d", num1, num2, num3)
@@ -633,10 +633,10 @@ func TestCrashFollowerThenLeader(t *testing.T) {
 	cs.CrashPeer(uint64(origLeaderId))
 	time.Sleep(time.Duration(250) * time.Millisecond)
 
-	newLeaderId, _ := cs.CheckUniqueLeader()
+	newLeaderId, _, _ := cs.CheckUniqueLeader()
 	cs.SubmitToServer(newLeaderId, 29)
 	time.Sleep(time.Duration(250) * time.Millisecond)
-	num4, _ := cs.CheckCommitted(29, 0)
+	num4, _, _ := cs.CheckCommitted(29, 0)
 
 	if num4 != 3 {
 		t.Errorf("expected commit number = 3 found = %d", num4)
@@ -650,25 +650,25 @@ func TestCrashFollowerThenLeader(t *testing.T) {
 // 	cs := CreateNewCluster(t, 5)
 // 	defer cs.Shutdown()
 
-// 	origLeaderId, _ := cs.CheckUniqueLeader()
+// 	origLeaderId, _, _ := cs.CheckUniqueLeader()
 // 	cs.SubmitToServer(origLeaderId, 25)
 // 	time.Sleep(time.Duration(900) * time.Microsecond)
 // 	cs.CrashPeer(uint64(origLeaderId))
 // 	time.Sleep(time.Duration(250) * time.Millisecond)
 
-// 	num, _ := cs.CheckCommitted(25, 1)
+// 	num, _, _ := cs.CheckCommitted(25, 1)
 // 	if num != 0 {
 // 		t.Errorf("expected 0 commits found %d", num)
 // 	}
 
 // 	cs.RestartPeer(uint64(origLeaderId))
 // 	time.Sleep(time.Duration(150) * time.Millisecond)
-// 	newLeaderId, _ := cs.CheckUniqueLeader()
+// 	newLeaderId, _, _ := cs.CheckUniqueLeader()
 // 	cs.SubmitToServer(newLeaderId, 27)
 // 	time.Sleep(time.Duration(250) * time.Millisecond)
 
-// 	num1, _ := cs.CheckCommitted(25, 0)
-// 	num2, _ := cs.CheckCommitted(27, 0)
+// 	num1, _, _ := cs.CheckCommitted(25, 0)
+// 	num2, _, _ := cs.CheckCommitted(27, 0)
 
 // 	if num1 != 5 || num2 != 5 {
 // 		t.Errorf("expected num1 = num2 = 5 found num1 = %d num2 = %d", num1, num2)
