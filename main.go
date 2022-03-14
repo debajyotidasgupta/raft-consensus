@@ -156,18 +156,22 @@ func Stop(cluster *raft.ClusterSimulator) error {
 }
 
 func PrintMenu() {
-	fmt.Println("MENU:")
-	fmt.Println("USER COMMANDS					ARGUMENTS")
-	fmt.Println("1-> create cluster				number of nodes")
-	fmt.Println("2-> set data					key, value, [peerId]")
-	fmt.Println("3-> get data					key, [peerId]")
-	fmt.Println("4-> disconnect peer				peerId")
-	fmt.Println("5-> reconnect peer				peerId")
-	fmt.Println("6-> crash peer					peerId")
-	fmt.Println("7-> restart peer				peerId")
-	fmt.Println("8-> shutdown					_")
-	fmt.Println("9-> check leader				_")
-	fmt.Println("10->stop execution				_")
+	fmt.Println("\n           RAFT MENU: [nodes are 0 indexed]")
+	fmt.Println("+---------------------------+---------------------------+")
+	fmt.Println("| Sr |  USER COMMANDS       |      ARGUMENTS            |")
+	fmt.Println("+----+----------------------+---------------------------+")
+	fmt.Println("| 1  | create cluster       |      number of nodes      |")
+	fmt.Println("| 2  | set data             |      key, value, [peerId] |")
+	fmt.Println("| 3  | get data             |      key, [peerId]        |")
+	fmt.Println("| 4  | disconnect peer      |      peerId               |")
+	fmt.Println("| 5  | reconnect peer       |      peerId               |")
+	fmt.Println("| 6  | crash peer           |      peerId               |")
+	fmt.Println("| 7  | restart peer         |      peerId               |")
+	fmt.Println("| 8  | shutdown             |      _                    |")
+	fmt.Println("| 9  | check leader         |      _                    |")
+	fmt.Println("| 10 | stop execution       |      _                    |")
+	fmt.Println("+----+----------------------+---------------------------+")
+	fmt.Println("")
 }
 
 func main() {
