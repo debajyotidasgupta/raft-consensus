@@ -11,16 +11,16 @@ import (
 	"strings"
 )
 
-//USER COMMANDS					ARGUMENTS
-//1-> create cluster			number of nodes
-//2-> set data					key, value, [peerId]
-//3-> get data					key, [peerId]
-//4-> disconnect peer			peerId
-//5-> reconnect peer			peerId
-//6-> crash peer				peerId
-//7-> shutdown					_
-//8-> check leader				_
-//9-> stop execution			_
+//USER COMMANDS                 ARGUMENTS
+//1-> create cluster            number of nodes
+//2-> set data                  key, value, [peerId]
+//3-> get data                  key, [peerId]
+//4-> disconnect peer           peerId
+//5-> reconnect peer            peerId
+//6-> crash peer                peerId
+//7-> shutdown                  _
+//8-> check leader              _
+//9-> stop execution            _
 
 func CreateCluster(peers int) (*raft.ClusterSimulator, error) {
 	if peers < 0 {
