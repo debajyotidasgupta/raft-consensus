@@ -820,6 +820,7 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 			serverIds := v.ServerIds
 			for i := 0; i < len(serverIds); i++ {
 				if rn.peerList.Exists(uint64(serverIds[i])) {
+					rn.mu.Unlock()
 					return false, nil, errors.New("server with given serverID already exists")
 				}
 			}
