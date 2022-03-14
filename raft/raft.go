@@ -619,6 +619,8 @@ func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesRe
 				// If the newEntriesIndex is less than the length of the entries, append the entries
 				rn.debug("Inserting entries %v from index %d", args.Entries[newEntriesIndex-1:], logInsertIndex)
 				rn.log = append(rn.log[:logInsertIndex-1], args.Entries[newEntriesIndex-1:]...) //	Insert the new entries
+				// Add the code to Update Config
+				// Add code to establish connections
 				rn.debug("Log is now: %v", rn.log)
 			}
 
@@ -825,11 +827,20 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 				}
 			}
 			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
-			rn.persistToStorage()                                                     // Persist the log to storage
-			rn.debug("log=%v", rn.log)                                                // Debug the log state
-			rn.mu.Unlock()                                                            // Unlock the mutex before returning
-			rn.trigger <- struct{}{}                                                  // Trigger the event for append entries
-			return true, nil, nil                                                     // Return true since we are the leader
+
+			// Updating the configuration for this node. Raft Paper Section 6 mentions that
+			// "Once a server adds the new configuration to its log, it uses that configuration
+			// for all future decisions (regardless of whether it has been committed) "
+			for i := 0; i < len(serverIds); i++ {
+				rn.peerList.Add(uint64(serverIds[i]))
+				rn.server.peerList.Add(uint64(serverIds[i]))
+			}
+			// Add code to establish connections
+			rn.persistToStorage()      // Persist the log to storage
+			rn.debug("log=%v", rn.log) // Debug the log state
+			rn.mu.Unlock()             // Unlock the mutex before returning
+			rn.trigger <- struct{}{}   // Trigger the event for append entries
+			return true, nil, nil      // Return true since we are the leader
 		default:
 			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
 			rn.persistToStorage()                                                     // Persist the log to storage
