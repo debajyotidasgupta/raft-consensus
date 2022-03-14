@@ -3,9 +3,11 @@ package raft
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/rpc"
 	"sync"
+	"time"
 )
 
 type ServiceType uint64
@@ -31,6 +33,7 @@ type Server struct {
 	service *ServiceType // DUMMY SERVICE FOR TESTING PURPOSES
 }
 
+//to avoid https://github.com/golang/go/issues/19957 issue
 type RPCProxy struct {
 	rn *RaftNode
 }
@@ -86,7 +89,7 @@ func (s *Server) Serve(port ...string) {
 	s.rpcProxy = &RPCProxy{rn: s.rn}
 	//MIGHT ADD PROXY LATER
 	//s.rpcServer.RegisterName("RaftNode", s.rpcProxy) //register the new service
-	s.rpcServer.RegisterName("RaftNode", s.rn)
+	s.rpcServer.RegisterName("RaftNode", s.rpcProxy)
 
 	var st ServiceType = ServiceType(1)
 	s.service = &st
@@ -188,4 +191,16 @@ func (s *ServiceType) DisplayMsg(args uint64, reply *uint64) error {
 	fmt.Printf("received %d\n", args)
 	*reply = 2 * args
 	return nil
+}
+
+//RPC call from proxy for RequestVote
+func (rp *RPCProxy) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) error {
+	time.Sleep(time.Duration(1+rand.Intn(5)) * time.Millisecond)
+	return rp.rn.RequestVote(args, reply)
+}
+
+//RPC call from proxy for AppendEntries
+func (rp *RPCProxy) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply) error {
+	time.Sleep(time.Duration(1+rand.Intn(5)) * time.Millisecond)
+	return rp.rn.AppendEntries(args, reply)
 }

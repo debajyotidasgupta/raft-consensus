@@ -114,6 +114,17 @@ func CrashPeer(cluster *raft.ClusterSimulator, peerId int) error {
 	return nil
 }
 
+func RestartPeer(cluster *raft.ClusterSimulator, peerId int) error {
+	if cluster == nil {
+		return errors.New("raft cluster not created")
+	}
+	if peerId < 0 {
+		return errors.New("invalid peer id passed")
+	}
+	cluster.RestartPeer(uint64(peerId))
+	return nil
+}
+
 func Shutdown(cluster *raft.ClusterSimulator) error {
 	if cluster == nil {
 		return errors.New("raft cluster not created")
@@ -144,10 +155,7 @@ func Stop(cluster *raft.ClusterSimulator) error {
 	return nil
 }
 
-func main() {
-	var input string
-	var cluster *raft.ClusterSimulator = nil
-	var peers int = 0
+func PrintMenu() {
 	fmt.Println("MENU:")
 	fmt.Println("USER COMMANDS					ARGUMENTS")
 	fmt.Println("1-> create cluster				number of nodes")
@@ -156,11 +164,22 @@ func main() {
 	fmt.Println("4-> disconnect peer				peerId")
 	fmt.Println("5-> reconnect peer				peerId")
 	fmt.Println("6-> crash peer					peerId")
-	fmt.Println("7-> shutdown					_")
-	fmt.Println("8-> check leader				_")
-	fmt.Println("9-> stop execution				_")
+	fmt.Println("7-> restart peer				peerId")
+	fmt.Println("8-> shutdown					_")
+	fmt.Println("9-> check leader				_")
+	fmt.Println("10->stop execution				_")
+}
+
+func main() {
+	var input string
+	var cluster *raft.ClusterSimulator = nil
+	var peers int = 0
+
 	gob.Register(raft.Write{})
 	gob.Register(raft.Read{})
+
+	PrintMenu()
+
 	for {
 		fmt.Println("WAITING FOR INPUTS..")
 		reader := bufio.NewReader(os.Stdin)
@@ -289,6 +308,22 @@ func main() {
 				fmt.Printf("%v\n", err)
 			}
 		case 7:
+			if len(tokens) < 2 {
+				fmt.Println("peer id not passed")
+				break
+			}
+			peer, err := strconv.Atoi(tokens[1])
+			if err != nil || peer >= peers {
+				fmt.Printf("invalid server id %d passed\n", peer)
+				break
+			}
+			err = RestartPeer(cluster, peer)
+			if err == nil {
+				fmt.Printf("PEER %d RESTARTED\n", peer)
+			} else {
+				fmt.Printf("%v\n", err)
+			}
+		case 8:
 			err := Shutdown(cluster)
 			if err == nil {
 				fmt.Println("ALL SERVERS STOPPED AND RAFT SERVICE STOPPED")
@@ -296,14 +331,14 @@ func main() {
 				fmt.Printf("%v\n", err)
 			}
 			cluster = nil
-		case 8:
+		case 9:
 			leaderId, term, err := CheckLeader(cluster)
 			if err == nil {
 				fmt.Printf("LEADER ID: %d, TERM: %d\n", leaderId, term)
 			} else {
 				fmt.Printf("%v\n", err)
 			}
-		case 9:
+		case 10:
 			err := Stop(cluster)
 			if err == nil {
 				fmt.Println("STOPPING EXECUTION, NO INPUTS WILL BE TAKEN FURTHER")
@@ -315,6 +350,7 @@ func main() {
 		default:
 			fmt.Println("Invalid Command")
 		}
+		PrintMenu()
 	}
 }
 
