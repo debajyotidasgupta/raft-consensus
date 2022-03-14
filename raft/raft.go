@@ -33,10 +33,38 @@ type LogEntry struct {
 	Term    uint64      // Term is the term of the log entry
 }
 
+// Set implementation from https://golangbyexample.com/set-implementation-in-golang/
+type Set struct {
+	peerSet map[uint64]struct{}
+}
+
+func makeSet() Set {
+	return Set{
+		peerSet: make(map[uint64]struct{}),
+	}
+}
+
+func (c *Set) Add(key uint64) {
+	c.peerSet[key] = struct{}{}
+}
+
+func (c *Set) Remove(key uint64) error {
+	_, exists := c.peerSet[key]
+	if !exists {
+		return fmt.Errorf("Remove Error: Item doesn't exist in set")
+	}
+	delete(c.peerSet, key)
+	return nil
+}
+
+func (c *Set) Size() int {
+	return len(c.peerSet)
+}
+
 type RaftNode struct {
 	id             uint64           // id is the id of the Raft node
 	mu             sync.Mutex       // Mutex protects the Raft node
-	peers          []uint64         // Peer is the list of peers in the Raft cluster
+	peerList       Set              // Peer is the list of peers in the Raft cluster
 	server         *Server          // Server is the server of the Raft node. Issue RPCs to the peers
 	db             *Database        // Database is the storage of the Raft node
 	commitChan     chan CommitEntry // CommitChan is the channel the channel where this Raft Node is going to report committed log entries
@@ -109,10 +137,10 @@ func (rn *RaftNode) debug(format string, args ...interface{}) {
 // notify the caller that the peers have been initialized and the Raft
 // node is ready to be started.
 
-func NewRaftNode(id uint64, peers []uint64, server *Server, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *RaftNode {
+func NewRaftNode(id uint64, peerList Set, server *Server, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *RaftNode {
 	node := &RaftNode{
 		id:                 id,                      // id is the id of the Raft node
-		peers:              peers,                   // Peer is the list of peers in the Raft cluster
+		peerList:           peerList,                // List of peers of this Raft node
 		server:             server,                  // Server is the server of the Raft node. Issue RPCs to the peers
 		db:                 db,                      // Database is the storage of the Raft node
 		commitChan:         commitChan,              // CommitChan is the channel the channel where this Raft Node is going to report committed log entries
@@ -278,7 +306,7 @@ func (rn *RaftNode) startElection() {
 	rn.debug("Becomes Candidate (currentTerm=%d); log=%v", savedCurrentTerm, rn.log)
 
 	// Send RequestVote RPCs to all other peer servers concurrently.
-	for _, peer := range rn.peers {
+	for peer := range rn.peerList.peerSet {
 		go func(peer uint64) {
 			rn.mu.Lock()
 			savedLastLogIndex, savedLastLogTerm := rn.lastLogIndexAndTerm()
@@ -313,8 +341,8 @@ func (rn *RaftNode) startElection() {
 					if reply.VoteGranted {
 
 						// If the vote is granted, increment the vote count
-						votesReceived += 1                     // Increment the vote count
-						if votesReceived*2 > len(rn.peers)+1 { // If we have majority votes, become leader
+						votesReceived += 1                          // Increment the vote count
+						if votesReceived*2 > rn.peerList.Size()+1 { // If we have majority votes, become leader
 
 							// Won the election so become leader
 							rn.debug("Wins election with %d votes", votesReceived)
@@ -338,7 +366,7 @@ func (rn *RaftNode) startElection() {
 func (rn *RaftNode) becomeLeader() {
 	rn.state = Leader // Update the state to leader
 
-	for _, peer := range rn.peers {
+	for peer := range rn.peerList.peerSet {
 		rn.nextIndex[peer] = uint64(len(rn.log)) + 1 // Initialize nextIndex for all peers with the last log index (leader) + 1
 		rn.matchIndex[peer] = 0                      // No match index yet
 	}
@@ -408,7 +436,7 @@ func (rn *RaftNode) leaderSendAEs() {
 	savedCurrentTerm := rn.currentTerm // Save the current term
 	rn.mu.Unlock()                     // Unlock the mutex
 
-	for _, peer := range rn.peers {
+	for peer := range rn.peerList.peerSet {
 
 		// The following goroutine is used to send AppendEntries RPCs
 		// to one peer  in  the  cluster  and  collect  responses  to
@@ -459,7 +487,7 @@ func (rn *RaftNode) leaderSendAEs() {
 							if rn.log[i-1].Term == rn.currentTerm { //	If the term is the same as the current term, update the commit index
 								matchCount := 1 //	Initialize the match count to single match
 
-								for _, peer := range rn.peers {
+								for peer := range rn.peerList.peerSet {
 									if rn.matchIndex[peer] >= i {
 
 										// If  the  match  index  is greater than or equal
@@ -467,7 +495,7 @@ func (rn *RaftNode) leaderSendAEs() {
 										matchCount++
 									}
 								}
-								if matchCount*2 > len(rn.peers)+1 {
+								if matchCount*2 > rn.peerList.Size()+1 {
 
 									// If the match count is greater than the
 									// number of peers plus 1,  that  is  got

@@ -17,7 +17,7 @@ type ServiceType uint64
 type Server struct {
 	mu        sync.Mutex             // mutual exclusion for accessing server members
 	serverId  uint64                 // id of this server
-	peerIds   []uint64               // peerIds that this server will connect as a client
+	peerList  Set                    // peerIds that this server will connect as a client
 	rpcServer *rpc.Server            // RPC Server
 	listener  net.Listener           // listener to keep listening for incoming connections
 	peers     map[uint64]*rpc.Client // maps peerId to corresponding peer
@@ -39,10 +39,10 @@ type RPCProxy struct {
 }
 
 //create a Server Instance with serverId and list of peerIds
-func CreateServer(serverId uint64, peerIds []uint64, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *Server {
+func CreateServer(serverId uint64, peerList Set, db *Database, ready <-chan interface{}, commitChan chan CommitEntry) *Server {
 	s := new(Server)
 	s.serverId = serverId
-	s.peerIds = peerIds
+	s.peerList = peerList
 	s.peers = make(map[uint64]*rpc.Client)
 	s.db = db
 	s.ready = ready
@@ -83,7 +83,7 @@ func (s *Server) ConnectionAccept() {
 //4. start listening for incoming connections
 func (s *Server) Serve(port ...string) {
 	s.mu.Lock()
-	s.rn = NewRaftNode(s.serverId, s.peerIds, s, s.db, s.ready, s.commitChan)
+	s.rn = NewRaftNode(s.serverId, s.peerList, s, s.db, s.ready, s.commitChan)
 
 	s.rpcServer = rpc.NewServer() //create a new RPC Server for the new service
 	s.rpcProxy = &RPCProxy{rn: s.rn}
