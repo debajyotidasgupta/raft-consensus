@@ -3,6 +3,7 @@ package raft
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
