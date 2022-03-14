@@ -149,7 +149,7 @@ func (nc *ClusterSimulator) Shutdown() {
 }
 
 // Reads channel and adds all received entries to the corresponding commits
-func (nc *ClusterSimulator) collectCommits(i uint64) {
+func (nc *ClusterSimulator) collectCommits(i uint64) error {
 	for commit := range nc.commitChans[i] {
 		nc.mu.Lock()
 		logtest(i, "collectCommits (%d) got %+v", i, commit)
@@ -161,7 +161,8 @@ func (nc *ClusterSimulator) collectCommits(i uint64) {
 			enc := gob.NewEncoder(&buf) // Create a new encoder
 
 			if err := enc.Encode(v.Val); err != nil { // Encode the data
-				return
+				nc.mu.Unlock()
+				return err
 			}
 			nc.dbCluster[i].Set(v.Key, buf.Bytes()) // Save the data to the database
 		default:
@@ -170,10 +171,11 @@ func (nc *ClusterSimulator) collectCommits(i uint64) {
 		nc.commits[i] = append(nc.commits[i], commit)
 		nc.mu.Unlock()
 	}
+	return nil
 }
 
 // Disconnect a server from other servers
-func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
+func (nc *ClusterSimulator) DisconnectPeer(id uint64) error {
 	logtest(id, "Disconnect %d", id)
 
 	nc.raftCluster[id].DisconnectAll()
@@ -185,10 +187,11 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) {
 		}
 	}
 	nc.isConnected[id] = false
+	return nil
 }
 
 // Reconnect a server to other servers
-func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
+func (nc *ClusterSimulator) ReconnectPeer(id uint64) error {
 	logtest(id, "Reconnect %d", id)
 
 	for i := range nc.activeServers.peerSet {
@@ -198,7 +201,7 @@ func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 				if nc.t != nil {
 					nc.t.Fatal(err)
 				} else {
-					return
+					return err
 				}
 			}
 			err = nc.raftCluster[i].ConnectToPeer(id, nc.raftCluster[id].GetListenerAddr())
@@ -206,32 +209,39 @@ func (nc *ClusterSimulator) ReconnectPeer(id uint64) {
 				if nc.t != nil {
 					nc.t.Fatal(err)
 				} else {
-					return
+					return err
 				}
 			}
 		}
 	}
 
 	nc.isConnected[id] = true
+	return nil
 }
 
 // Crash a server and shut it down
-func (nc *ClusterSimulator) CrashPeer(id uint64) {
+func (nc *ClusterSimulator) CrashPeer(id uint64) error {
 	logtest(id, "Crash %d", id)
 
 	nc.DisconnectPeer(id)
+
 	nc.isAlive[id] = false
 	nc.raftCluster[id].Stop()
 
 	nc.mu.Lock()
 	nc.commits[id] = nc.commits[id][:0]
 	nc.mu.Unlock()
+	return nil
 }
 
 // Restart a server and reconnect to other peers
-func (nc *ClusterSimulator) RestartPeer(id uint64) {
+func (nc *ClusterSimulator) RestartPeer(id uint64) error {
 	if nc.isAlive[id] {
-		log.Fatalf("Id %d alive in restart peer", id)
+		if nc.t != nil {
+			log.Fatalf("Id %d alive in restart peer", id)
+		} else {
+			return fmt.Errorf("id %d alive in restart peer", id)
+		}
 	}
 	logtest(id, "Restart ", id, id)
 
@@ -253,10 +263,11 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) {
 	close(ready)
 	nc.isAlive[id] = true
 	time.Sleep(time.Duration(20) * time.Millisecond)
+	return nil
 }
 
 // Ensure only a single leader
-func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
+func (nc *ClusterSimulator) CheckUniqueLeader() (int, int, error) {
 	for r := 0; r < 8; r++ {
 		leaderId := -1
 		leaderTerm := -1
@@ -272,14 +283,14 @@ func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
 						if nc.t != nil {
 							nc.t.Fatalf("2 ids: %d, %d think they are leaders", leaderId, i)
 						} else {
-							return -1, -1
+							return -1, -1, fmt.Errorf("2 ids: %d, %d think they are leaders", leaderId, i)
 						}
 					}
 				}
 			}
 		}
 		if leaderId >= 0 {
-			return leaderId, leaderTerm
+			return leaderId, leaderTerm, nil
 		}
 		time.Sleep(150 * time.Millisecond)
 	}
@@ -287,11 +298,11 @@ func (nc *ClusterSimulator) CheckUniqueLeader() (int, int) {
 	if nc.t != nil {
 		nc.t.Fatalf("no leader found")
 	}
-	return -1, -1
+	return -1, -1, fmt.Errorf("no leader found")
 }
 
 // check if there are no leaders
-func (nc *ClusterSimulator) CheckNoLeader() {
+func (nc *ClusterSimulator) CheckNoLeader() error {
 
 	for i := range nc.activeServers.peerSet {
 		if nc.isConnected[i] {
@@ -299,16 +310,19 @@ func (nc *ClusterSimulator) CheckNoLeader() {
 				if nc.t != nil {
 					nc.t.Fatalf("%d is Leader, expected no leader", i)
 				} else {
-					return
+					return fmt.Errorf("%d is Leader, expected no leader", i)
 				}
 			}
 		}
 	}
+	return nil
 }
 
-func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (num int, index int) {
+func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (num int, index int, err error) {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
+
+	err = nil
 
 	// Find the length of the commits slice for connected servers.
 	commitsLen := -1
@@ -320,7 +334,8 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 					if nc.t != nil {
 						nc.t.Fatalf("commits[%d] = %d, commitsLen = %d", i, nc.commits[i], commitsLen)
 					} else {
-						return -1, -1
+						err = fmt.Errorf("commits[%d] = %d, commitsLen = %d", i, nc.commits[i], commitsLen)
+						return -1, -1, err
 					}
 				}
 			} else {
@@ -340,6 +355,8 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 					if cmdOfN != cmdAtC {
 						if nc.t != nil {
 							nc.t.Errorf("got %d, want %d at nc.commits[%d][%d]", cmdOfN, cmdAtC, i, c)
+						} else {
+							err = fmt.Errorf("got %d, want %d at nc.commits[%d][%d]", cmdOfN, cmdAtC, i, c)
 						}
 					}
 				} else {
@@ -356,6 +373,8 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 					if index >= 0 && int(nc.commits[i][c].Index) != index {
 						if nc.t != nil {
 							nc.t.Errorf("got Index=%d, want %d at h.commits[%d][%d]", nc.commits[i][c].Index, index, i, c)
+						} else {
+							err = fmt.Errorf("got Index=%d, want %d at h.commits[%d][%d]", nc.commits[i][c].Index, index, i, c)
 						}
 					} else {
 						index = int(nc.commits[i][c].Index)
@@ -363,7 +382,7 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 					num++
 				}
 			}
-			return num, index
+			return num, index, err
 		}
 	}
 
@@ -372,10 +391,12 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 	if choice == TestCommitFunction {
 		if nc.t != nil {
 			nc.t.Errorf("cmd = %d not found in commits", cmd)
+		} else {
+			err = fmt.Errorf("cmd = %d not found in commits", cmd)
 		}
-		return 0, -1
+		return 0, -1, err
 	} else {
-		return 0, -1
+		return 0, -1, err
 	}
 
 }
