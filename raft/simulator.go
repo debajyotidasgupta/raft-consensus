@@ -70,13 +70,13 @@ type RemoveServers struct {
 func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	// initialising required fields of ClusterSimulator
 
-	serverList := make(map[uint64]*Server, n)
-	isConnected := make(map[uint64]bool, n)
-	isAlive := make(map[uint64]bool, n)
-	commitChans := make(map[uint64]chan CommitEntry, n)
-	commits := make(map[uint64][]CommitEntry, n)
+	serverList := make(map[uint64]*Server)
+	isConnected := make(map[uint64]bool)
+	isAlive := make(map[uint64]bool)
+	commitChans := make(map[uint64]chan CommitEntry)
+	commits := make(map[uint64][]CommitEntry)
 	ready := make(chan interface{})
-	storage := make(map[uint64]*Database, n)
+	storage := make(map[uint64]*Database)
 	activeServers := makeSet()
 	// creating servers
 
@@ -410,12 +410,68 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 }
 
 func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool, interface{}, error) {
-	switch cmd.(type) {
+	switch v := cmd.(type) {
 	case AddServers:
-		// Cluster Modifications
+		nc.mu.Lock()
+		// Cluster modifications
+		serverIds := v.ServerIds
+		for i := 0; i < len(serverIds); i++ {
+			nc.activeServers.Add(uint64(serverIds[i]))
+		}
+		ready := make(chan interface{})
+
+		// creating the new servers to be added
+		for i := uint64(0); i < uint64(len(serverIds)); i++ {
+			peerList := makeSet()
+
+			// get PeerList for server i
+			for j := range nc.activeServers.peerSet {
+				if i == j {
+					continue
+				} else {
+					peerList.Add(j)
+				}
+			}
+
+			nc.dbCluster[i] = NewDatabase()
+			nc.commitChans[i] = make(chan CommitEntry)
+			nc.raftCluster[i] = CreateServer(i, peerList, nc.dbCluster[i], ready, nc.commitChans[i])
+
+			nc.raftCluster[i].Serve()
+			nc.isAlive[i] = true
+		}
+
+		// Connecting peers to each other
+		for i := uint64(0); i < uint64(len(serverIds)); i++ {
+			for j := range nc.activeServers.peerSet {
+				if i == j {
+					continue
+				}
+				nc.raftCluster[i].ConnectToPeer(j, nc.raftCluster[j].GetListenerAddr())
+			}
+			nc.isConnected[i] = true
+		}
+		nc.mu.Unlock()
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	case RemoveServers:
 		// Cluster Modifications
+		serverIds := v.ServerIds
+		nc.mu.Lock()
+		for i := uint64(0); i < uint64(len(serverIds)); i++ {
+			nc.DisconnectPeer(uint64(serverIds[i]))
+			nc.isAlive[uint64(serverIds[i])] = false
+			nc.raftCluster[uint64(serverIds[i])].Stop()
+			nc.commits[uint64(serverIds[i])] = nc.commits[uint64(serverIds[i])][:0]
+
+			// Removing traces of this server
+			delete(nc.raftCluster, uint64(serverIds[i]))
+			delete(nc.dbCluster, uint64(serverIds[i]))
+			delete(nc.commitChans, uint64(serverIds[i]))
+			delete(nc.commits, uint64(serverIds[i]))
+			delete(nc.isAlive, uint64(serverIds[i]))
+			delete(nc.isConnected, uint64(serverIds[i]))
+		}
+		nc.mu.Unlock()
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	default:
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)

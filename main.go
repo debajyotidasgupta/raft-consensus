@@ -368,7 +368,7 @@ func main() {
 			}
 			err = ReconnectPeer(cluster, peer)
 			if err == nil {
-				fmt.Printf("PEER %d DISCONNECTED\n", peer)
+				fmt.Printf("PEER %d RECONNECTED\n", peer)
 			} else {
 				fmt.Printf("%v\n", err)
 			}
