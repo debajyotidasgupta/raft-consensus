@@ -256,6 +256,8 @@ func main() {
 
 	gob.Register(raft.Write{})
 	gob.Register(raft.Read{})
+	gob.Register(raft.AddServers{})
+	gob.Register(raft.RemoveServers{})
 
 	PrintMenu()
 
@@ -303,7 +305,7 @@ func main() {
 			serverId := 0
 			if len(tokens) >= 4 {
 				serverId, err = strconv.Atoi(tokens[3])
-				if err != nil || serverId >= peers {
+				if err != nil /*|| serverId >= peers*/ {
 					fmt.Printf("invalid server id %d passed\n", serverId)
 					break
 				}
@@ -326,7 +328,7 @@ func main() {
 			serverId := 0
 			if len(tokens) >= 3 {
 				serverId, err = strconv.Atoi(tokens[2])
-				if err != nil || serverId >= peers {
+				if err != nil /*|| serverId >= peers*/ {
 					fmt.Printf("invalid server id %d passed\n", serverId)
 					break
 				}
@@ -345,7 +347,7 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers*/ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}
@@ -362,7 +364,7 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers */ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}
@@ -378,7 +380,7 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers*/ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}
@@ -394,7 +396,7 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers*/ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}

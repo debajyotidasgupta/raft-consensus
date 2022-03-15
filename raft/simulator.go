@@ -14,7 +14,7 @@ import (
 
 func init() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	seed := time.Now().UnixNano()
+	seed := time.Now().UnixNano() // 1647347572251367891
 	fmt.Println("Seed: ", seed)
 	rand.Seed(seed)
 }
@@ -184,6 +184,9 @@ func (nc *ClusterSimulator) collectCommits(i uint64) error {
 
 // Disconnect a server from other servers
 func (nc *ClusterSimulator) DisconnectPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	logtest(id, "Disconnect %d", id)
 
 	nc.raftCluster[id].DisconnectAll()
@@ -200,6 +203,9 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) error {
 
 // Reconnect a server to other servers
 func (nc *ClusterSimulator) ReconnectPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	logtest(id, "Reconnect %d", id)
 
 	for i := range nc.raftCluster[id].peerList.peerSet {
@@ -229,6 +235,9 @@ func (nc *ClusterSimulator) ReconnectPeer(id uint64) error {
 
 // Crash a server and shut it down
 func (nc *ClusterSimulator) CrashPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	logtest(id, "Crash %d", id)
 
 	nc.DisconnectPeer(id)
@@ -244,6 +253,9 @@ func (nc *ClusterSimulator) CrashPeer(id uint64) error {
 
 // Restart a server and reconnect to other peers
 func (nc *ClusterSimulator) RestartPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	if nc.isAlive[id] {
 		if nc.t != nil {
 			log.Fatalf("Id %d alive in restart peer", id)
@@ -410,6 +422,9 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 }
 
 func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool, interface{}, error) {
+	if !nc.activeServers.Exists(uint64(serverId)) {
+		return false, nil, fmt.Errorf("invalid server id passed")
+	}
 	switch v := cmd.(type) {
 	case AddServers:
 		nc.mu.Lock()
@@ -426,31 +441,31 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 
 			// get PeerList for server i
 			for j := range nc.activeServers.peerSet {
-				if i == j {
+				if uint64(serverIds[i]) == j {
 					continue
 				} else {
 					peerList.Add(j)
 				}
 			}
 
-			nc.dbCluster[i] = NewDatabase()
-			nc.commitChans[i] = make(chan CommitEntry)
-			nc.raftCluster[i] = CreateServer(i, peerList, nc.dbCluster[i], ready, nc.commitChans[i])
+			nc.dbCluster[uint64(serverIds[i])] = NewDatabase()
+			nc.commitChans[uint64(serverIds[i])] = make(chan CommitEntry)
+			nc.raftCluster[uint64(serverIds[i])] = CreateServer(uint64(serverIds[i]), peerList, nc.dbCluster[uint64(serverIds[i])], ready, nc.commitChans[uint64(serverIds[i])])
 
-			nc.raftCluster[i].Serve()
-			nc.isAlive[i] = true
+			nc.raftCluster[uint64(serverIds[i])].Serve()
+			nc.isAlive[uint64(serverIds[i])] = true
 		}
 
 		// Connecting peers to each other
 		for i := uint64(0); i < uint64(len(serverIds)); i++ {
 			for j := range nc.activeServers.peerSet {
-				if i == j {
+				if uint64(serverIds[i]) == j {
 					continue
 				}
-				nc.raftCluster[i].ConnectToPeer(j, nc.raftCluster[j].GetListenerAddr())
-				nc.raftCluster[j].ConnectToPeer(i, nc.raftCluster[i].GetListenerAddr())
+				nc.raftCluster[uint64(serverIds[i])].ConnectToPeer(j, nc.raftCluster[j].GetListenerAddr())
+				nc.raftCluster[j].ConnectToPeer(uint64(serverIds[i]), nc.raftCluster[uint64(serverIds[i])].GetListenerAddr())
 			}
-			nc.isConnected[i] = true
+			nc.isConnected[uint64(serverIds[i])] = true
 		}
 		nc.mu.Unlock()
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)

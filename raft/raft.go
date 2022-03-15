@@ -311,6 +311,9 @@ func (rn *RaftNode) startElection() {
 					return
 				} else if reply.Term == savedCurrentTerm {
 					//	If the term is equal to ours, we need to check the vote
+					fmt.Println("Candi Id: ", rn.id)
+					fmt.Println(peer)
+					fmt.Println(reply)
 					if reply.VoteGranted {
 
 						// If the vote is granted, increment the vote count
@@ -416,24 +419,24 @@ func (rn *RaftNode) leaderSendAEs() {
 		// determine and update the current state  of  the  Raft Node
 
 		go func(peer uint64) {
-			rn.mu.Lock()                    //	Lock the mutex
-			nextIndex := rn.nextIndex[peer] //	Get the next index for this peer
-			prevLogIndex := nextIndex - 1   //	Get the previous log index for this peer
-			prevLogTerm := uint64(0)        //	Get the previous log term for this peer
+			rn.mu.Lock()                       //	Lock the mutex
+			nextIndex := rn.nextIndex[peer]    //	Get the next index for this peer
+			prevLogIndex := int(nextIndex) - 1 //	Get the previous log index for this peer
+			prevLogTerm := uint64(0)           //	Get the previous log term for this peer
 
 			if prevLogIndex > 0 {
 				//	If the previous log index is greater than 0, get the previous log term from the log
-				prevLogTerm = rn.log[prevLogIndex-1].Term
+				prevLogTerm = rn.log[uint64(prevLogIndex)-1].Term
 			}
-			entries := rn.log[nextIndex-1:] //	Get the entries for this peer
+			entries := rn.log[int(nextIndex)-1:] //	Get the entries for this peer
 
 			args := AppendEntriesArgs{
-				Term:         savedCurrentTerm, //	Get the current term
-				LeaderId:     rn.id,            //	Get the id of the leader
-				PrevLogIndex: prevLogIndex,     //	Get the previous log index
-				PrevLogTerm:  prevLogTerm,      //	Get the previous log term
-				Entries:      entries,          //	Get the entries
-				LeaderCommit: rn.commitIndex,   //	Get the leader commit index
+				Term:         savedCurrentTerm,     //	Get the current term
+				LeaderId:     rn.id,                //	Get the id of the leader
+				PrevLogIndex: uint64(prevLogIndex), //	Get the previous log index
+				PrevLogTerm:  prevLogTerm,          //	Get the previous log term
+				Entries:      entries,              //	Get the entries
+				LeaderCommit: rn.commitIndex,       //	Get the leader commit index
 			}
 
 			rn.mu.Unlock() //	Unlock the mutex before sending the RPC
@@ -628,6 +631,9 @@ func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesRe
 					switch v := cmd.(type) {
 					case AddServers:
 						for _, peerId := range v.ServerIds {
+							if rn.id == uint64(peerId) {
+								continue
+							}
 							rn.peerList.Add(uint64(peerId)) // add new server id to the peerList
 						}
 					case RemoveServers:
@@ -850,6 +856,8 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 			for i := 0; i < len(serverIds); i++ {
 				rn.peerList.Add(uint64(serverIds[i]))
 				rn.server.peerList.Add(uint64(serverIds[i]))
+				rn.nextIndex[uint64(serverIds[i])] = uint64(len(rn.log)) + 1 // Initialize nextIndex for all peers with the last log index (leader) + 1
+				rn.matchIndex[uint64(serverIds[i])] = 0                      // No match index yet
 			}
 			// Add code to establish connections
 			rn.persistToStorage()      // Persist the log to storage
