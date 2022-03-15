@@ -442,7 +442,7 @@ func main() {
 					fmt.Println("Invalid server ID")
 					break
 				}
-				serverIds[i] = val
+				serverIds[i-1] = val
 			}
 
 			err = AddServers(cluster, serverIds)
@@ -465,7 +465,7 @@ func main() {
 					fmt.Println("Invalid server ID")
 					break
 				}
-				serverIds[i] = val
+				serverIds[i-1] = val
 			}
 
 			err = RemoveServers(cluster, serverIds)
