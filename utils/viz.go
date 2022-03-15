@@ -77,6 +77,7 @@ func TableViz(tl TestLog) {
 		t.AppendSeparator()
 		t.AppendRow(row)
 	}
+	t.SetStyle(table.StyleLight)
 	t.Render()
 }
 
