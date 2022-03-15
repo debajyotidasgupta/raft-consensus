@@ -78,6 +78,7 @@ func TableViz(tl TestLog) {
 		t.AppendRow(row)
 	}
 	t.SetStyle(table.StyleLight)
+	// t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
 	t.Render()
 }
 
