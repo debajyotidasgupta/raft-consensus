@@ -448,6 +448,7 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 					continue
 				}
 				nc.raftCluster[i].ConnectToPeer(j, nc.raftCluster[j].GetListenerAddr())
+				nc.raftCluster[j].ConnectToPeer(i, nc.raftCluster[i].GetListenerAddr())
 			}
 			nc.isConnected[i] = true
 		}
