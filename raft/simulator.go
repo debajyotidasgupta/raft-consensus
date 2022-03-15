@@ -485,6 +485,7 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 			nc.isAlive[uint64(serverIds[i])] = false
 			nc.raftCluster[uint64(serverIds[i])].Stop()
 			nc.commits[uint64(serverIds[i])] = nc.commits[uint64(serverIds[i])][:0]
+			close(nc.commitChans[uint64(serverIds[i])])
 
 			// Removing traces of this server
 			delete(nc.raftCluster, uint64(serverIds[i]))
@@ -493,6 +494,8 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 			delete(nc.commits, uint64(serverIds[i]))
 			delete(nc.isAlive, uint64(serverIds[i]))
 			delete(nc.isConnected, uint64(serverIds[i]))
+
+			nc.activeServers.Remove(uint64(serverIds[i]))
 		}
 		nc.mu.Unlock()
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)

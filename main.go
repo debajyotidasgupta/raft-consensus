@@ -472,7 +472,7 @@ func main() {
 
 			err = RemoveServers(cluster, serverIds)
 			if err == nil {
-				fmt.Printf("Added ServerIDs: %v to cluster", serverIds)
+				fmt.Printf("Removed ServerIDs: %v from cluster", serverIds)
 			} else {
 				fmt.Printf("%v\n", err)
 			}

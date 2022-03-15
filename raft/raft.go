@@ -311,9 +311,9 @@ func (rn *RaftNode) startElection() {
 					return
 				} else if reply.Term == savedCurrentTerm {
 					//	If the term is equal to ours, we need to check the vote
-					fmt.Println("Candi Id: ", rn.id)
+					/*fmt.Println("Candi Id: ", rn.id)
 					fmt.Println(peer)
-					fmt.Println(reply)
+					fmt.Println(reply)*/
 					if reply.VoteGranted {
 
 						// If the vote is granted, increment the vote count
