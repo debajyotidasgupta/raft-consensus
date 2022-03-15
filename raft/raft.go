@@ -621,6 +621,22 @@ func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesRe
 				rn.log = append(rn.log[:logInsertIndex-1], args.Entries[newEntriesIndex-1:]...) //	Insert the new entries
 				// Add the code to Update Config
 				// Add code to establish/remove connections
+
+				// loop over the new entries to check if any is for cluster change
+				for _, entry := range args.Entries[newEntriesIndex-1:] {
+					cmd := entry.Command
+					switch v := cmd.(type) {
+					case AddServers:
+						for _, peerId := range v.ServerIds {
+							rn.peerList.Add(uint64(peerId)) // add new server id to the peerList
+						}
+					case RemoveServers:
+						for _, peerId := range v.ServerIds {
+							rn.peerList.Remove(uint64(peerId)) // remove old server id from the peerList
+						}
+					}
+				}
+
 				rn.debug("Log is now: %v", rn.log)
 			}
 
