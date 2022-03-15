@@ -40,9 +40,10 @@ func min(a, b int) int {
 func format(msg string) string {
 	// break the message in multiple lines to display only 30 characters per line
 	newMsg := ""
+	numChars := 30
 
-	for i := 0; i < len(msg); i += 30 {
-		newMsg += msg[i:min(i+30, len(msg))] + "\n"
+	for i := 0; i < len(msg); i += numChars {
+		newMsg += msg[i:min(i+numChars, len(msg))] + "\n"
 	}
 
 	return newMsg
