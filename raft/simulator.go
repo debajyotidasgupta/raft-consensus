@@ -467,6 +467,13 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 			}
 			nc.isConnected[uint64(serverIds[i])] = true
 		}
+
+		for i := uint64(0); i < uint64(len(serverIds)); i++ {
+			go nc.collectCommits(uint64(serverIds[i]))
+		}
+
+		close(ready)
+
 		nc.mu.Unlock()
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	case RemoveServers:
