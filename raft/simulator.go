@@ -22,16 +22,16 @@ func init() {
 type ClusterSimulator struct {
 	mu sync.Mutex
 
-	raftCluster []*Server // all servers present in Cluster
-	dbCluster   []*Database
+	raftCluster map[uint64]*Server // all servers present in Cluster
+	dbCluster   map[uint64]*Database
 
-	commitChans []chan CommitEntry // commit Channel for each Cluster
+	commitChans map[uint64]chan CommitEntry // commit Channel for each Cluster
 
-	commits [][]CommitEntry // commits[i] := sequence of commits by server i
+	commits map[uint64][]CommitEntry // commits[i] := sequence of commits by server i
 
-	isConnected []bool // check if node i is connected to cluster
+	isConnected map[uint64]bool // check if node i is connected to cluster
 
-	isAlive []bool // check if node is alive
+	isAlive map[uint64]bool // check if node is alive
 	/*
 	*Now that servers can leave/enter, the cluster must have
 	*info of all servers in the cluster, which is stored in
@@ -70,13 +70,13 @@ type RemoveServers struct {
 func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	// initialising required fields of ClusterSimulator
 
-	serverList := make([]*Server, n)
-	isConnected := make([]bool, n)
-	isAlive := make([]bool, n)
-	commitChans := make([]chan CommitEntry, n)
-	commits := make([][]CommitEntry, n)
+	serverList := make(map[uint64]*Server, n)
+	isConnected := make(map[uint64]bool, n)
+	isAlive := make(map[uint64]bool, n)
+	commitChans := make(map[uint64]chan CommitEntry, n)
+	commits := make(map[uint64][]CommitEntry, n)
 	ready := make(chan interface{})
-	storage := make([]*Database, n)
+	storage := make(map[uint64]*Database, n)
 	activeServers := makeSet()
 	// creating servers
 
@@ -413,12 +413,12 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 	switch cmd.(type) {
 	case AddServers:
 		// Cluster Modifications
-		return nc.raftCluster[serverId].rn.Submit(cmd)
+		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	case RemoveServers:
 		// Cluster Modifications
-		return nc.raftCluster[serverId].rn.Submit(cmd)
+		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	default:
-		return nc.raftCluster[serverId].rn.Submit(cmd)
+		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	}
 }
 
