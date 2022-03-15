@@ -634,6 +634,7 @@ func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesRe
 						for _, peerId := range v.ServerIds {
 							rn.peerList.Remove(uint64(peerId)) // remove old server id from the peerList
 						}
+					}
 				}
 
 				rn.debug("Log is now: %v", rn.log)
