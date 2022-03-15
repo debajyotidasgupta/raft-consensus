@@ -122,6 +122,34 @@ func AddServers(cluster *raft.ClusterSimulator, serverIds []int) error {
 	}
 }
 
+//remove server from the raft cluster
+func RemoveServers(cluster *raft.ClusterSimulator, serverIds []int) error {
+	if cluster == nil {
+		return errors.New("raft cluster not created")
+	}
+	commandToServer := raft.RemoveServers{ServerIds: serverIds}
+	var err error
+	serverId, _, err := cluster.CheckUniqueLeader()
+
+	if err != nil {
+		return err
+	}
+
+	if serverId < 0 {
+		return errors.New("unable to submit command to any server")
+	}
+
+	if success, _, err := cluster.SubmitToServer(serverId, commandToServer); success {
+		if err != nil {
+			return err
+		} else {
+			return nil
+		}
+	} else {
+		return errors.New("command could not be submitted, try different server")
+	}
+}
+
 //disconnect a peer from the cluster
 func DisconnectPeer(cluster *raft.ClusterSimulator, peerId int) error {
 	if cluster == nil {
@@ -423,8 +451,29 @@ func main() {
 			} else {
 				fmt.Printf("%v\n", err)
 			}
-
 		case 12:
+			if len(tokens) < 2 {
+				fmt.Println("peer ids not passed")
+				break
+			}
+			serverIds := make([]int, len(tokens)-1)
+			var val int
+			var err error
+			for i := 1; i < len(tokens); i++ {
+				val, err = strconv.Atoi(tokens[i])
+				if err != nil {
+					fmt.Println("Invalid server ID")
+					break
+				}
+				serverIds[i] = val
+			}
+
+			err = RemoveServers(cluster, serverIds)
+			if err == nil {
+				fmt.Printf("Added ServerIDs: %v to cluster", serverIds)
+			} else {
+				fmt.Printf("%v\n", err)
+			}
 		default:
 			fmt.Println("Invalid Command")
 		}

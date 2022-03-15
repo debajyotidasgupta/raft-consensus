@@ -413,35 +413,6 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 	return nc.raftCluster[serverId].rn.Submit(cmd)
 }
 
-//PART OF CONFIGURATION CHANGE
-
-type ConfigChangeRequest struct {
-}
-
-type Config map[uint64]bool
-
-func Union(c1, c2 Config) Config {
-	c := make(Config)
-	for peer, present := range c1 {
-		if present {
-			c[peer] = true
-		}
-	}
-	for peer, present := range c2 {
-		if present {
-			c[peer] = true
-		}
-	}
-
-	return c
-}
-
-func (nc *ClusterSimulator) ConfigChange(configNew Config) {
-	/*
-
-	 */
-}
-
 func logtest(id uint64, logstr string, a ...interface{}) {
 	if DEBUG > 0 {
 		logstr = "[" + strconv.Itoa(int(id)) + "] " + "[TEST]" + logstr
