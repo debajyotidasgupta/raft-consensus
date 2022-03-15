@@ -410,7 +410,16 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 }
 
 func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool, interface{}, error) {
-	return nc.raftCluster[serverId].rn.Submit(cmd)
+	switch cmd.(type) {
+	case AddServers:
+		// Cluster Modifications
+		return nc.raftCluster[serverId].rn.Submit(cmd)
+	case RemoveServers:
+		// Cluster Modifications
+		return nc.raftCluster[serverId].rn.Submit(cmd)
+	default:
+		return nc.raftCluster[serverId].rn.Submit(cmd)
+	}
 }
 
 func logtest(id uint64, logstr string, a ...interface{}) {
