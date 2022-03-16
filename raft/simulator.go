@@ -477,6 +477,7 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 		nc.mu.Unlock()
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	case RemoveServers:
+		r1, r2, r3 := nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 		// Cluster Modifications
 		serverIds := v.ServerIds
 		nc.mu.Lock()
@@ -498,7 +499,7 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 			nc.activeServers.Remove(uint64(serverIds[i]))
 		}
 		nc.mu.Unlock()
-		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
+		return r1, r2, r3
 	default:
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	}
