@@ -694,7 +694,7 @@ func (rn *RaftNode) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) e
 	rn.mu.Lock()
 	defer rn.mu.Unlock()
 
-	if rn.state == Dead { // If the node is dead, we don't need to process this request, since it is stale
+	if rn.state == Dead || !rn.peerList.Exists(args.CandidateId) { // If the node is dead, we don't need to process this request, since it is stale
 		return nil
 	}
 
