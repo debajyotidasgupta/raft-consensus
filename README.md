@@ -184,6 +184,8 @@ This is an example of how to list things you need to use the software and how to
   npm install npm@latest -g
   ```
 - [ ] Tell about installing clean `GO`
+To run the code in this Assignment, one needs to have Go installed in their system. If it is not
+already installed, it can be done by following the steps in [https://www.tecmint.com/install-go-in-ubuntu/#:~:text=To%20download%20the%20latest%20version,download%20it%20on%20the%20terminal.&text=Next%2C%20extract%20the%20tarball%20to%20%2Fusr%2Flocal%20directory.&text=Add%20the%20go%20binary%20path,a%20system%2Dwide%20installation).](Install Go Ubuntu)
   
 
 ### Installation
