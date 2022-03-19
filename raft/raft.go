@@ -3,6 +3,7 @@ package raft
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -310,6 +311,9 @@ func (rn *RaftNode) startElection() {
 					return
 				} else if reply.Term == savedCurrentTerm {
 					//	If the term is equal to ours, we need to check the vote
+					/*fmt.Println("Candi Id: ", rn.id)
+					fmt.Println(peer)
+					fmt.Println(reply)*/
 					if reply.VoteGranted {
 
 						// If the vote is granted, increment the vote count
@@ -415,24 +419,24 @@ func (rn *RaftNode) leaderSendAEs() {
 		// determine and update the current state  of  the  Raft Node
 
 		go func(peer uint64) {
-			rn.mu.Lock()                    //	Lock the mutex
-			nextIndex := rn.nextIndex[peer] //	Get the next index for this peer
-			prevLogIndex := nextIndex - 1   //	Get the previous log index for this peer
-			prevLogTerm := uint64(0)        //	Get the previous log term for this peer
+			rn.mu.Lock()                       //	Lock the mutex
+			nextIndex := rn.nextIndex[peer]    //	Get the next index for this peer
+			prevLogIndex := int(nextIndex) - 1 //	Get the previous log index for this peer
+			prevLogTerm := uint64(0)           //	Get the previous log term for this peer
 
 			if prevLogIndex > 0 {
 				//	If the previous log index is greater than 0, get the previous log term from the log
-				prevLogTerm = rn.log[prevLogIndex-1].Term
+				prevLogTerm = rn.log[uint64(prevLogIndex)-1].Term
 			}
-			entries := rn.log[nextIndex-1:] //	Get the entries for this peer
+			entries := rn.log[int(nextIndex)-1:] //	Get the entries for this peer
 
 			args := AppendEntriesArgs{
-				Term:         savedCurrentTerm, //	Get the current term
-				LeaderId:     rn.id,            //	Get the id of the leader
-				PrevLogIndex: prevLogIndex,     //	Get the previous log index
-				PrevLogTerm:  prevLogTerm,      //	Get the previous log term
-				Entries:      entries,          //	Get the entries
-				LeaderCommit: rn.commitIndex,   //	Get the leader commit index
+				Term:         savedCurrentTerm,     //	Get the current term
+				LeaderId:     rn.id,                //	Get the id of the leader
+				PrevLogIndex: uint64(prevLogIndex), //	Get the previous log index
+				PrevLogTerm:  prevLogTerm,          //	Get the previous log term
+				Entries:      entries,              //	Get the entries
+				LeaderCommit: rn.commitIndex,       //	Get the leader commit index
 			}
 
 			rn.mu.Unlock() //	Unlock the mutex before sending the RPC
@@ -547,9 +551,9 @@ func (rn *RaftNode) lastLogIndexAndTerm() (uint64, uint64) {
 // This function expects the  Node's  mutex  to  be  locked
 
 func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply) error {
-	rn.mu.Lock()          // Lock the mutex before updating the state
-	defer rn.mu.Unlock()  // Unlock the mutex after updating the state
-	if rn.state == Dead { // If the node is dead, return false
+	rn.mu.Lock()                                                // Lock the mutex before updating the state
+	defer rn.mu.Unlock()                                        // Unlock the mutex after updating the state
+	if rn.state == Dead || !rn.peerList.Exists(args.LeaderId) { // If the node is dead, return false
 		return nil //	Return no error
 	}
 	rn.debug("AppendEntries: %+v", args)
@@ -618,6 +622,27 @@ func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesRe
 				// If the newEntriesIndex is less than the length of the entries, append the entries
 				rn.debug("Inserting entries %v from index %d", args.Entries[newEntriesIndex-1:], logInsertIndex)
 				rn.log = append(rn.log[:logInsertIndex-1], args.Entries[newEntriesIndex-1:]...) //	Insert the new entries
+				// Add the code to Update Config
+				// Add code to establish/remove connections
+
+				// loop over the new entries to check if any is for cluster change
+				for _, entry := range args.Entries[newEntriesIndex-1:] {
+					cmd := entry.Command
+					switch v := cmd.(type) {
+					case AddServers:
+						for _, peerId := range v.ServerIds {
+							if rn.id == uint64(peerId) {
+								continue
+							}
+							rn.peerList.Add(uint64(peerId)) // add new server id to the peerList
+						}
+					case RemoveServers:
+						for _, peerId := range v.ServerIds {
+							rn.peerList.Remove(uint64(peerId)) // remove old server id from the peerList
+						}
+					}
+				}
+
 				rn.debug("Log is now: %v", rn.log)
 			}
 
@@ -669,7 +694,7 @@ func (rn *RaftNode) RequestVote(args RequestVoteArgs, reply *RequestVoteReply) e
 	rn.mu.Lock()
 	defer rn.mu.Unlock()
 
-	if rn.state == Dead { // If the node is dead, we don't need to process this request, since it is stale
+	if rn.state == Dead || !rn.peerList.Exists(args.CandidateId) { // If the node is dead, we don't need to process this request, since it is stale
 		return nil
 	}
 
@@ -815,6 +840,56 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 			readErr := rn.readFromStorage(key, &value)
 			rn.mu.Unlock()
 			return true, value, readErr
+		case AddServers:
+			serverIds := v.ServerIds
+			for i := 0; i < len(serverIds); i++ {
+				if rn.peerList.Exists(uint64(serverIds[i])) {
+					rn.mu.Unlock()
+					return false, nil, errors.New("server with given serverID already exists")
+				}
+			}
+			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
+
+			// Updating the configuration for this node. Raft Paper Section 6 mentions that
+			// "Once a server adds the new configuration to its log, it uses that configuration
+			// for all future decisions (regardless of whether it has been committed) "
+			for i := 0; i < len(serverIds); i++ {
+				rn.peerList.Add(uint64(serverIds[i]))
+				rn.server.peerList.Add(uint64(serverIds[i]))
+				rn.nextIndex[uint64(serverIds[i])] = uint64(len(rn.log)) + 1 // Initialize nextIndex for all peers with the last log index (leader) + 1
+				rn.matchIndex[uint64(serverIds[i])] = 0                      // No match index yet
+			}
+			// Add code to establish connections
+			rn.persistToStorage()      // Persist the log to storage
+			rn.debug("log=%v", rn.log) // Debug the log state
+			rn.mu.Unlock()             // Unlock the mutex before returning
+			rn.trigger <- struct{}{}   // Trigger the event for append entries
+			return true, nil, nil      // Return true since we are the leader
+		case RemoveServers:
+			serverIds := v.ServerIds
+			for i := 0; i < len(serverIds); i++ {
+				if !rn.peerList.Exists(uint64(serverIds[i])) && rn.id != uint64(serverIds[i]) {
+					rn.mu.Unlock()
+					return false, nil, errors.New("server with given serverID does not exist")
+				}
+			}
+			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
+
+			// Updating the configuration for this node. Raft Paper Section 6 mentions that
+			// "Once a server adds the new configuration to its log, it uses that configuration
+			// for all future decisions (regardless of whether it has been committed) "
+			for i := 0; i < len(serverIds); i++ {
+				if rn.id != uint64(serverIds[i]) {
+					rn.peerList.Remove(uint64(serverIds[i]))
+					rn.server.peerList.Remove(uint64(serverIds[i]))
+				}
+			}
+			// Add code to remove connections
+			rn.persistToStorage()      // Persist the log to storage
+			rn.debug("log=%v", rn.log) // Debug the log state
+			rn.mu.Unlock()             // Unlock the mutex before returning
+			rn.trigger <- struct{}{}   // Trigger the event for append entries
+			return true, nil, nil      // Return true since we are the leader
 		default:
 			rn.log = append(rn.log, LogEntry{Command: command, Term: rn.currentTerm}) // Append the command to the log
 			rn.persistToStorage()                                                     // Persist the log to storage

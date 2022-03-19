@@ -94,6 +94,62 @@ func GetData(cluster *raft.ClusterSimulator, key string, serverParam ...int) (in
 	}
 }
 
+//add new server to the raft cluster
+func AddServers(cluster *raft.ClusterSimulator, serverIds []int) error {
+	if cluster == nil {
+		return errors.New("raft cluster not created")
+	}
+	commandToServer := raft.AddServers{ServerIds: serverIds}
+	var err error
+	serverId, _, err := cluster.CheckUniqueLeader()
+
+	if err != nil {
+		return err
+	}
+
+	if serverId < 0 {
+		return errors.New("unable to submit command to any server")
+	}
+
+	if success, _, err := cluster.SubmitToServer(serverId, commandToServer); success {
+		if err != nil {
+			return err
+		} else {
+			return nil
+		}
+	} else {
+		return errors.New("command could not be submitted, try different server")
+	}
+}
+
+//remove server from the raft cluster
+func RemoveServers(cluster *raft.ClusterSimulator, serverIds []int) error {
+	if cluster == nil {
+		return errors.New("raft cluster not created")
+	}
+	commandToServer := raft.RemoveServers{ServerIds: serverIds}
+	var err error
+	serverId, _, err := cluster.CheckUniqueLeader()
+
+	if err != nil {
+		return err
+	}
+
+	if serverId < 0 {
+		return errors.New("unable to submit command to any server")
+	}
+
+	if success, _, err := cluster.SubmitToServer(serverId, commandToServer); success {
+		if err != nil {
+			return err
+		} else {
+			return nil
+		}
+	} else {
+		return errors.New("command could not be submitted, try different server")
+	}
+}
+
 //disconnect a peer from the cluster
 func DisconnectPeer(cluster *raft.ClusterSimulator, peerId int) error {
 	if cluster == nil {
@@ -185,6 +241,8 @@ func PrintMenu() {
 	fmt.Println("| 8  | shutdown             |      _                    |")
 	fmt.Println("| 9  | check leader         |      _                    |")
 	fmt.Println("| 10 | stop execution       |      _                    |")
+	fmt.Println("| 11 | add servers          |      [peerId]             |")
+	fmt.Println("| 12 | remove servers       |      [peerId]             |")
 	fmt.Println("+----+----------------------+---------------------------+")
 	fmt.Println("")
 	fmt.Println("+-----------------      USER      ----------------------+")
@@ -198,6 +256,8 @@ func main() {
 
 	gob.Register(raft.Write{})
 	gob.Register(raft.Read{})
+	gob.Register(raft.AddServers{})
+	gob.Register(raft.RemoveServers{})
 
 	PrintMenu()
 
@@ -245,7 +305,7 @@ func main() {
 			serverId := 0
 			if len(tokens) >= 4 {
 				serverId, err = strconv.Atoi(tokens[3])
-				if err != nil || serverId >= peers {
+				if err != nil /*|| serverId >= peers*/ {
 					fmt.Printf("invalid server id %d passed\n", serverId)
 					break
 				}
@@ -268,7 +328,7 @@ func main() {
 			serverId := 0
 			if len(tokens) >= 3 {
 				serverId, err = strconv.Atoi(tokens[2])
-				if err != nil || serverId >= peers {
+				if err != nil /*|| serverId >= peers*/ {
 					fmt.Printf("invalid server id %d passed\n", serverId)
 					break
 				}
@@ -287,7 +347,7 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers*/ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}
@@ -304,13 +364,13 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers */ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}
 			err = ReconnectPeer(cluster, peer)
 			if err == nil {
-				fmt.Printf("PEER %d DISCONNECTED\n", peer)
+				fmt.Printf("PEER %d RECONNECTED\n", peer)
 			} else {
 				fmt.Printf("%v\n", err)
 			}
@@ -320,7 +380,7 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers*/ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}
@@ -336,7 +396,7 @@ func main() {
 				break
 			}
 			peer, err := strconv.Atoi(tokens[1])
-			if err != nil || peer >= peers {
+			if err != nil /*|| peer >= peers*/ {
 				fmt.Printf("invalid server id %d passed\n", peer)
 				break
 			}
@@ -367,6 +427,52 @@ func main() {
 				fmt.Println("STOPPING EXECUTION, NO INPUTS WILL BE TAKEN FURTHER")
 				cluster = nil
 				return
+			} else {
+				fmt.Printf("%v\n", err)
+			}
+		case 11:
+			if len(tokens) < 2 {
+				fmt.Println("peer ids not passed")
+				break
+			}
+			serverIds := make([]int, len(tokens)-1)
+			var val int
+			var err error
+			for i := 1; i < len(tokens); i++ {
+				val, err = strconv.Atoi(tokens[i])
+				if err != nil {
+					fmt.Println("Invalid server ID")
+					break
+				}
+				serverIds[i-1] = val
+			}
+
+			err = AddServers(cluster, serverIds)
+			if err == nil {
+				fmt.Printf("Added ServerIDs: %v to cluster", serverIds)
+			} else {
+				fmt.Printf("%v\n", err)
+			}
+		case 12:
+			if len(tokens) < 2 {
+				fmt.Println("peer ids not passed")
+				break
+			}
+			serverIds := make([]int, len(tokens)-1)
+			var val int
+			var err error
+			for i := 1; i < len(tokens); i++ {
+				val, err = strconv.Atoi(tokens[i])
+				if err != nil {
+					fmt.Println("Invalid server ID")
+					break
+				}
+				serverIds[i-1] = val
+			}
+
+			err = RemoveServers(cluster, serverIds)
+			if err == nil {
+				fmt.Printf("Removed ServerIDs: %v from cluster", serverIds)
 			} else {
 				fmt.Printf("%v\n", err)
 			}

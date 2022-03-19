@@ -14,27 +14,26 @@ import (
 
 func init() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	seed := time.Now().UnixNano()
-
-	// Uncomment this line to see the values of the seed
-	// fmt.Println("Seed: ", seed)
-
+  
+	seed := time.Now().UnixNano() // 1647347572251367891
+	fmt.Println("Seed: ", seed)
+  
 	rand.Seed(seed)
 }
 
 type ClusterSimulator struct {
 	mu sync.Mutex
 
-	raftCluster []*Server // all servers present in Cluster
-	dbCluster   []*Database
+	raftCluster map[uint64]*Server // all servers present in Cluster
+	dbCluster   map[uint64]*Database
 
-	commitChans []chan CommitEntry // commit Channel for each Cluster
+	commitChans map[uint64]chan CommitEntry // commit Channel for each Cluster
 
-	commits [][]CommitEntry // commits[i] := sequence of commits by server i
+	commits map[uint64][]CommitEntry // commits[i] := sequence of commits by server i
 
-	isConnected []bool // check if node i is connected to cluster
+	isConnected map[uint64]bool // check if node i is connected to cluster
 
-	isAlive []bool // check if node is alive
+	isAlive map[uint64]bool // check if node is alive
 	/*
 	*Now that servers can leave/enter, the cluster must have
 	*info of all servers in the cluster, which is stored in
@@ -61,17 +60,25 @@ type Read struct {
 	Key string
 }
 
+type AddServers struct {
+	ServerIds []int
+}
+
+type RemoveServers struct {
+	ServerIds []int
+}
+
 // Create a new ClusterSimulator
 func CreateNewCluster(t *testing.T, n uint64) *ClusterSimulator {
 	// initialising required fields of ClusterSimulator
 
-	serverList := make([]*Server, n)
-	isConnected := make([]bool, n)
-	isAlive := make([]bool, n)
-	commitChans := make([]chan CommitEntry, n)
-	commits := make([][]CommitEntry, n)
+	serverList := make(map[uint64]*Server)
+	isConnected := make(map[uint64]bool)
+	isAlive := make(map[uint64]bool)
+	commitChans := make(map[uint64]chan CommitEntry)
+	commits := make(map[uint64][]CommitEntry)
 	ready := make(chan interface{})
-	storage := make([]*Database, n)
+	storage := make(map[uint64]*Database)
 	activeServers := makeSet()
 	// creating servers
 
@@ -168,6 +175,28 @@ func (nc *ClusterSimulator) collectCommits(i uint64) error {
 				return err
 			}
 			nc.dbCluster[i].Set(v.Key, buf.Bytes()) // Save the data to the database
+		case RemoveServers:
+			serverIds := v.ServerIds
+			for i := uint64(0); i < uint64(len(serverIds)); i++ {
+				if nc.activeServers.Exists(uint64(serverIds[i])) {
+					// Cluster Modifications
+					nc.DisconnectPeer(uint64(serverIds[i]))
+					nc.isAlive[uint64(serverIds[i])] = false
+					nc.raftCluster[uint64(serverIds[i])].Stop()
+					nc.commits[uint64(serverIds[i])] = nc.commits[uint64(serverIds[i])][:0]
+					close(nc.commitChans[uint64(serverIds[i])])
+
+					// Removing traces of this server
+					delete(nc.raftCluster, uint64(serverIds[i]))
+					delete(nc.dbCluster, uint64(serverIds[i]))
+					delete(nc.commitChans, uint64(serverIds[i]))
+					delete(nc.commits, uint64(serverIds[i]))
+					delete(nc.isAlive, uint64(serverIds[i]))
+					delete(nc.isConnected, uint64(serverIds[i]))
+
+					nc.activeServers.Remove(uint64(serverIds[i]))
+				}
+			}
 		default:
 			break
 		}
@@ -179,10 +208,13 @@ func (nc *ClusterSimulator) collectCommits(i uint64) error {
 
 // Disconnect a server from other servers
 func (nc *ClusterSimulator) DisconnectPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	logtest(id, "Disconnect %d", id)
 
 	nc.raftCluster[id].DisconnectAll()
-	for i := range nc.raftCluster[id].peerList.peerSet {
+	for i := range nc.activeServers.peerSet {
 		if i == id {
 			continue
 		} else {
@@ -195,9 +227,12 @@ func (nc *ClusterSimulator) DisconnectPeer(id uint64) error {
 
 // Reconnect a server to other servers
 func (nc *ClusterSimulator) ReconnectPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	logtest(id, "Reconnect %d", id)
 
-	for i := range nc.raftCluster[id].peerList.peerSet {
+	for i := range nc.activeServers.peerSet {
 		if i != id && nc.isAlive[i] {
 			err := nc.raftCluster[id].ConnectToPeer(i, nc.raftCluster[i].GetListenerAddr())
 			if err != nil {
@@ -224,6 +259,9 @@ func (nc *ClusterSimulator) ReconnectPeer(id uint64) error {
 
 // Crash a server and shut it down
 func (nc *ClusterSimulator) CrashPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	logtest(id, "Crash %d", id)
 
 	nc.DisconnectPeer(id)
@@ -239,6 +277,9 @@ func (nc *ClusterSimulator) CrashPeer(id uint64) error {
 
 // Restart a server and reconnect to other peers
 func (nc *ClusterSimulator) RestartPeer(id uint64) error {
+	if !nc.activeServers.Exists(uint64(id)) {
+		return fmt.Errorf("invalid server id passed")
+	}
 	if nc.isAlive[id] {
 		if nc.t != nil {
 			log.Fatalf("Id %d alive in restart peer", id)
@@ -249,7 +290,7 @@ func (nc *ClusterSimulator) RestartPeer(id uint64) error {
 	logtest(id, "Restart ", id, id)
 
 	peerList := makeSet()
-	for i := range nc.raftCluster[id].peerList.peerSet {
+	for i := range nc.activeServers.peerSet {
 		if id == i {
 			continue
 		} else {
@@ -405,36 +446,65 @@ func (nc *ClusterSimulator) CheckCommitted(cmd int, choice CommitFunctionType) (
 }
 
 func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool, interface{}, error) {
-	return nc.raftCluster[serverId].rn.Submit(cmd)
-}
-
-//PART OF CONFIGURATION CHANGE
-
-type ConfigChangeRequest struct {
-}
-
-type Config map[uint64]bool
-
-func Union(c1, c2 Config) Config {
-	c := make(Config)
-	for peer, present := range c1 {
-		if present {
-			c[peer] = true
-		}
+	if !nc.activeServers.Exists(uint64(serverId)) {
+		return false, nil, fmt.Errorf("invalid server id passed")
 	}
-	for peer, present := range c2 {
-		if present {
-			c[peer] = true
+	switch v := cmd.(type) {
+	case AddServers:
+		nc.mu.Lock()
+		// Cluster modifications
+		serverIds := v.ServerIds
+		for i := 0; i < len(serverIds); i++ {
+			nc.activeServers.Add(uint64(serverIds[i]))
 		}
+		ready := make(chan interface{})
+
+		// creating the new servers to be added
+		for i := uint64(0); i < uint64(len(serverIds)); i++ {
+			peerList := makeSet()
+
+			// get PeerList for server i
+			for j := range nc.activeServers.peerSet {
+				if uint64(serverIds[i]) == j {
+					continue
+				} else {
+					peerList.Add(j)
+				}
+			}
+
+			nc.dbCluster[uint64(serverIds[i])] = NewDatabase()
+			nc.commitChans[uint64(serverIds[i])] = make(chan CommitEntry)
+			nc.raftCluster[uint64(serverIds[i])] = CreateServer(uint64(serverIds[i]), peerList, nc.dbCluster[uint64(serverIds[i])], ready, nc.commitChans[uint64(serverIds[i])])
+
+			nc.raftCluster[uint64(serverIds[i])].Serve()
+			nc.isAlive[uint64(serverIds[i])] = true
+		}
+
+		// Connecting peers to each other
+		for i := uint64(0); i < uint64(len(serverIds)); i++ {
+			for j := range nc.activeServers.peerSet {
+				if uint64(serverIds[i]) == j {
+					continue
+				}
+				nc.raftCluster[uint64(serverIds[i])].ConnectToPeer(j, nc.raftCluster[j].GetListenerAddr())
+				nc.raftCluster[j].ConnectToPeer(uint64(serverIds[i]), nc.raftCluster[uint64(serverIds[i])].GetListenerAddr())
+			}
+			nc.isConnected[uint64(serverIds[i])] = true
+		}
+
+		for i := uint64(0); i < uint64(len(serverIds)); i++ {
+			go nc.collectCommits(uint64(serverIds[i]))
+		}
+
+		close(ready)
+
+		nc.mu.Unlock()
+		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
+	case RemoveServers:
+		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
+	default:
+		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	}
-
-	return c
-}
-
-func (nc *ClusterSimulator) ConfigChange(configNew Config) {
-	/*
-
-	 */
 }
 
 func logtest(id uint64, logstr string, a ...interface{}) {
