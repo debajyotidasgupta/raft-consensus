@@ -131,15 +131,15 @@ along with various Remote Procedural Calls*
 #### Server struct
 Structure to define a service object
 #### Server methods
-*CreateServer*: create a Server Instance with serverId and list of peerIds
-*ConnectionAccept*: keep listening for incoming connections and serve them
-*Serve*: start a new service
-*Stop*: stop an existing service
-*ConnectToPeer*: connect to another server or peer
-*DisconnectPeer*: disconnect from a particular peer
-*RPC*: make an RPC call to the particular peer
-*RequestVote*: RPC call from a raft node for RequestVote
-*AppendEntries*: RPC call from a raft node for AppendEntries
+*CreateServer\:* create a Server Instance with serverId and list of peerIds  
+*ConnectionAccept\:* keep listening for incoming connections and serve them  
+*Serve\:* start a new service  
+*Stop\:* stop an existing service  
+*ConnectToPeer\:* connect to another server or peer  
+*DisconnectPeer\:* disconnect from a particular peer  
+*RPC\:* make an RPC call to the particular peer  
+*RequestVote\:* RPC call from a raft node for RequestVote  
+*AppendEntries\:* RPC call from a raft node for AppendEntries  
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
