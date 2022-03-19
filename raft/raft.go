@@ -868,7 +868,7 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 		case RemoveServers:
 			serverIds := v.ServerIds
 			for i := 0; i < len(serverIds); i++ {
-				if !rn.peerList.Exists(uint64(serverIds[i])) {
+				if !rn.peerList.Exists(uint64(serverIds[i])) && rn.id != uint64(serverIds[i]) {
 					rn.mu.Unlock()
 					return false, nil, errors.New("server with given serverID does not exist")
 				}
@@ -879,8 +879,10 @@ func (rn *RaftNode) Submit(command interface{}) (bool, interface{}, error) {
 			// "Once a server adds the new configuration to its log, it uses that configuration
 			// for all future decisions (regardless of whether it has been committed) "
 			for i := 0; i < len(serverIds); i++ {
-				rn.peerList.Remove(uint64(serverIds[i]))
-				rn.server.peerList.Remove(uint64(serverIds[i]))
+				if rn.id != uint64(serverIds[i]) {
+					rn.peerList.Remove(uint64(serverIds[i]))
+					rn.server.peerList.Remove(uint64(serverIds[i]))
+				}
 			}
 			// Add code to remove connections
 			rn.persistToStorage()      // Persist the log to storage
