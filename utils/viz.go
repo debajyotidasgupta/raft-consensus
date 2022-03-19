@@ -6,36 +6,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
 	"regexp"
 	"strconv"
 	"strings"
-	"text/template"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
-
-type ServerState int
-
-const (
-	Follower ServerState = iota
-	Candidate
-	Leader
-	Dead
-)
-
-func (s ServerState) String() string {
-	switch s {
-	case Follower:
-		return "Follower"
-	case Candidate:
-		return "Candidate"
-	case Leader:
-		return "Leader"
-	case Dead:
-		return "Dead"
-	default:
-		panic("unreachable")
-	}
-}
 
 // Entry is a single log entry emitted by a raft server.
 type Entry struct {
@@ -54,162 +30,64 @@ type TestLog struct {
 	ids map[string]bool
 }
 
-const tmpl = `
-<!doctype html>
-<html lang='en'>
-  <head>
-    <title>{{.Title}}</title>
-  </head>
-  <style>
-  table {
-    font-family: "Courier New";
-    border-collapse: collapse;
-  }
-  table, th, td {
-    padding: 8px;
-    border: 1px solid #cccccc;
-  }
-  td.testcell {
-    background-color: #ffffff;
-  }
-  td.Follower {
-    background-color: #ffffff;
-  }
-  td.Candidate {
-    background-color: #e2e2a3;
-  }
-  td.Leader {
-    background-color: #e6fff5;
-  }
-  td.Dead {
-    background-color: #dddddd;
-  }
-  h1 {
-    text-align: center;
-  }
-  </style>
-<body>
-  <h1>{{.Title}}</h1>
-  <p></p>
-  <table>
-    <tr>
-      {{range .Headers}}
-      <th>{{.}}</th>
-      {{end}}
-    </tr>
-    {{range .HtmlItems}}
-    <tr>
-      {{.}}
-    </tr>
-    {{end}}
-  </table>
-</body>
-</html>
-`
-
-func emitTestViz(dirname string, tl TestLog) {
-	filename := path.Join(dirname, tl.name+".html")
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Fatal(err)
+func min(a, b int) int {
+	if a < b {
+		return a
 	}
-	defer f.Close()
+	return b
+}
 
-	t, err := template.New("page").Parse(tmpl)
-	if err != nil {
-		log.Fatal(err)
+func format(msg string) string {
+	// break the message in multiple lines to display only 30 characters per line
+	newMsg := ""
+	numChars := 30
+
+	for i := 0; i < len(msg); i += numChars {
+		newMsg += msg[i:min(i+numChars, len(msg))] + "\n"
 	}
 
-	var nservers int
-	var havetest bool
+	return newMsg
+}
 
-	if _, ok := tl.ids["TEST"]; ok {
-		havetest = true
-		nservers = len(tl.ids) - 1
-	} else {
-		havetest = false
-		nservers = len(tl.ids)
-	}
+func TableViz(tl TestLog) {
+	t := table.NewWriter()
+	nservers := len(tl.ids)
 
-	headers := []string{"Time"}
-	if havetest {
-		headers = append(headers, "TEST")
-	}
+	t.SetOutputMirror(os.Stdout)
+
+	headers := table.Row{"Time"}
 	for i := 0; i < nservers; i++ {
 		headers = append(headers, strconv.Itoa(i))
 	}
+	t.AppendHeader(headers)
 
-	serverState := make([]ServerState, nservers)
-
-	var htmlitems []string
 	for _, entry := range tl.entries {
-		var b strings.Builder
-		fmt.Fprintf(&b, "<td>%s</td>", entry.timestamp)
-		if entry.id == "TEST" {
-			if havetest {
-				fmt.Fprintf(&b, `  <td class="testcell">%s</td>`, entry.msg)
-				for i := 0; i < nservers; i++ {
-					fmt.Fprintf(&b, `  <td class="%s"></td>`, serverState[i])
-				}
+		row := table.Row{entry.timestamp}
+		idInt, err := strconv.Atoi(entry.id)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for i := 0; i < nservers; i++ {
+			if i == idInt {
+				row = append(row, format(entry.msg))
 			} else {
-				log.Fatal("have TEST entry with no test IDs")
-			}
-		} else {
-			idInt, err := strconv.Atoi(entry.id)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			if strings.Contains(entry.msg, "becomes Follower") {
-				serverState[idInt] = Follower
-			} else if strings.Contains(entry.msg, "listening") {
-				serverState[idInt] = Follower
-			} else if strings.Contains(entry.msg, "becomes Candidate") {
-				serverState[idInt] = Candidate
-			} else if strings.Contains(entry.msg, "becomes Leader") {
-				serverState[idInt] = Leader
-			} else if strings.Contains(entry.msg, "becomes Dead") {
-				serverState[idInt] = Dead
-			} else if strings.Contains(entry.msg, "created in state Follower") {
-				serverState[idInt] = Follower
-			}
-
-			if havetest {
-				fmt.Fprintf(&b, "  <td class=\"testcell\"></td>")
-			}
-			// Emit the right number of td's, with an entry in the right place.
-			for i := 0; i < idInt; i++ {
-				fmt.Fprintf(&b, `  <td class="%s"></td>`, serverState[i])
-			}
-			fmt.Fprintf(&b, `  <td class="%s">%s</td>`, serverState[idInt], entry.msg)
-			for i := idInt + 1; i < nservers; i++ {
-				fmt.Fprintf(&b, `  <td class="%s"></td>`, serverState[i])
+				row = append(row, "")
 			}
 		}
-		htmlitems = append(htmlitems, b.String())
+		t.AppendSeparator()
+		t.AppendRow(row)
 	}
-
-	data := struct {
-		Title     string
-		Headers   []string
-		HtmlItems []string
-	}{
-		Title:     fmt.Sprintf("%s -- %s", tl.name, tl.status),
-		Headers:   headers,
-		HtmlItems: htmlitems,
-	}
-	err = t.Execute(f, data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("... Emitted", "file://"+filename)
+	t.SetStyle(table.StyleLight)
+	// t.SetStyle(table.StyleColoredBlueWhiteOnBlack)
+	t.Render()
 }
 
 func parseTestLogs(rd io.Reader) []TestLog {
 	var testlogs []TestLog
 
 	statusRE := regexp.MustCompile(`--- (\w+):\s+(\w+)`)
-	entryRE := regexp.MustCompile(`([0-9:.]+) \[(\w+)\] (.*)`)
+	entryRE := regexp.MustCompile(`([0-9:.]+) \[(\d+)\] (.*)`)
 
 	scanner := bufio.NewScanner(bufio.NewReader(rd))
 	for scanner.Scan() {
@@ -252,9 +130,11 @@ func main() {
 	testlogs := parseTestLogs(os.Stdin)
 	tnames := make(map[string]int)
 
-	// Deduplicated the names of testlogs; in case the log containts multiple
-	// instances of the same test, we'd like them all the have different file
-	// names.
+	/**
+	 * We deduplicate the repeated test case names, so that in  case  the
+	 * test case name is repeated, we can generate a unique table for it.
+	 */
+
 	for i, tl := range testlogs {
 		if count, ok := tnames[tl.name]; ok {
 			testlogs[i].name = fmt.Sprintf("%s_%d", tl.name, count)
@@ -269,7 +149,7 @@ func main() {
 		if tl.status != "PASS" {
 			statusSummary = tl.status
 		}
-		emitTestViz("/tmp", tl)
+		TableViz(tl)
 		fmt.Println("")
 	}
 

@@ -64,7 +64,7 @@ func communicate(serverId uint64, numPeers uint64, s *Server) {
 // Change the numPeers to test with different number of peers
 func TestServerClient(t *testing.T) {
 	var numPeers uint64 = 5
-	var port = 20000
+	var port = 2000
 
 	for i := uint64(1); i <= numPeers; i++ {
 		portStr := strconv.Itoa(port)
