@@ -160,6 +160,13 @@ connections between them
 *Check_Functions\:* auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader,
 CheckNoLeader and CheckCommitted  
 
+### raft/raft_test.go
+*This file has a set of test functions designed to test the various functionalities of the raft protocol.
+The tests can be designed into 3 major classes:*  
+*Tests to check Leader Election*  
+*Tests to check Command Commits*  
+*Tests to check Membership Changes*  
+
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 
