@@ -173,6 +173,28 @@ func (nc *ClusterSimulator) collectCommits(i uint64) error {
 				return err
 			}
 			nc.dbCluster[i].Set(v.Key, buf.Bytes()) // Save the data to the database
+		case RemoveServers:
+			serverIds := v.ServerIds
+			for i := uint64(0); i < uint64(len(serverIds)); i++ {
+				if nc.activeServers.Exists(uint64(serverIds[i])) {
+					// Cluster Modifications
+					nc.DisconnectPeer(uint64(serverIds[i]))
+					nc.isAlive[uint64(serverIds[i])] = false
+					nc.raftCluster[uint64(serverIds[i])].Stop()
+					nc.commits[uint64(serverIds[i])] = nc.commits[uint64(serverIds[i])][:0]
+					close(nc.commitChans[uint64(serverIds[i])])
+
+					// Removing traces of this server
+					delete(nc.raftCluster, uint64(serverIds[i]))
+					delete(nc.dbCluster, uint64(serverIds[i]))
+					delete(nc.commitChans, uint64(serverIds[i]))
+					delete(nc.commits, uint64(serverIds[i]))
+					delete(nc.isAlive, uint64(serverIds[i]))
+					delete(nc.isConnected, uint64(serverIds[i]))
+
+					nc.activeServers.Remove(uint64(serverIds[i]))
+				}
+			}
 		default:
 			break
 		}
@@ -477,29 +499,7 @@ func (nc *ClusterSimulator) SubmitToServer(serverId int, cmd interface{}) (bool,
 		nc.mu.Unlock()
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	case RemoveServers:
-		r1, r2, r3 := nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
-		// Cluster Modifications
-		serverIds := v.ServerIds
-		nc.mu.Lock()
-		for i := uint64(0); i < uint64(len(serverIds)); i++ {
-			nc.DisconnectPeer(uint64(serverIds[i]))
-			nc.isAlive[uint64(serverIds[i])] = false
-			nc.raftCluster[uint64(serverIds[i])].Stop()
-			nc.commits[uint64(serverIds[i])] = nc.commits[uint64(serverIds[i])][:0]
-			close(nc.commitChans[uint64(serverIds[i])])
-
-			// Removing traces of this server
-			delete(nc.raftCluster, uint64(serverIds[i]))
-			delete(nc.dbCluster, uint64(serverIds[i]))
-			delete(nc.commitChans, uint64(serverIds[i]))
-			delete(nc.commits, uint64(serverIds[i]))
-			delete(nc.isAlive, uint64(serverIds[i]))
-			delete(nc.isConnected, uint64(serverIds[i]))
-
-			nc.activeServers.Remove(uint64(serverIds[i]))
-		}
-		nc.mu.Unlock()
-		return r1, r2, r3
+		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	default:
 		return nc.raftCluster[uint64(serverId)].rn.Submit(cmd)
 	}

@@ -551,9 +551,9 @@ func (rn *RaftNode) lastLogIndexAndTerm() (uint64, uint64) {
 // This function expects the  Node's  mutex  to  be  locked
 
 func (rn *RaftNode) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply) error {
-	rn.mu.Lock()          // Lock the mutex before updating the state
-	defer rn.mu.Unlock()  // Unlock the mutex after updating the state
-	if rn.state == Dead { // If the node is dead, return false
+	rn.mu.Lock()                                                // Lock the mutex before updating the state
+	defer rn.mu.Unlock()                                        // Unlock the mutex after updating the state
+	if rn.state == Dead || !rn.peerList.Exists(args.LeaderId) { // If the node is dead, return false
 		return nil //	Return no error
 	}
 	rn.debug("AppendEntries: %+v", args)
