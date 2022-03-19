@@ -1,4 +1,4 @@
-# Reft Consensus Algorithm
+# Raft Consensus Algorithm
 
 <div id="top"></div>
 <!--
