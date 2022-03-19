@@ -149,16 +149,16 @@ cluster and execute different commands such as read, write and config change on 
 Structure to define a Raft cluster
 #### Simulator methods
 *CreateNewCluster\:* create a new Raft cluster consisting of a given number of nodes and establish
-connections between them
-*Shutdown\:* shut down all servers in the cluster
-*CollectCommits\:* reads channel and adds all received entries to the corresponding commits
-*DisconnectPeer\:* disconnect a server from other servers
-*ReconnectPeer\:* reconnect a disconnected server to other servers
-*CrashPeer\:* crash a server and shut it down
-*RestartPeer\:* restart a crashed server and reconnect to other peers
-*SubmitToServer\:* submit a command to a server
+connections between them  
+*Shutdown\:* shut down all servers in the cluster  
+*CollectCommits\:* reads channel and adds all received entries to the corresponding commits  
+*DisconnectPeer\:* disconnect a server from other servers  
+*ReconnectPeer\:* reconnect a disconnected server to other servers  
+*CrashPeer\:* crash a server and shut it down  
+*RestartPeer\:* restart a crashed server and reconnect to other peers  
+*SubmitToServer\:* submit a command to a server  
 *Check_Functions\:* auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader,
-CheckNoLeader and CheckCommitted
+CheckNoLeader and CheckCommitted  
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
