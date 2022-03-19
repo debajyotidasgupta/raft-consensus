@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"encoding/gob"
 	"log"
 	"math/rand"
 	"strconv"
@@ -644,33 +645,99 @@ func TestCrashFollowerThenLeader(t *testing.T) {
 
 }
 
-// func TestCrashJustAfterSubmitThenRestart(t *testing.T) {
-// 	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+func TestAddNewServer(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
 
-// 	cs := CreateNewCluster(t, 5)
-// 	defer cs.Shutdown()
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
 
-// 	origLeaderId, _, _ := cs.CheckUniqueLeader()
-// 	cs.SubmitToServer(origLeaderId, 25)
-// 	time.Sleep(time.Duration(900) * time.Microsecond)
-// 	cs.CrashPeer(uint64(origLeaderId))
-// 	time.Sleep(time.Duration(250) * time.Millisecond)
+	gob.Register(Write{})
+	gob.Register(Read{})
+	gob.Register(AddServers{})
+	gob.Register(RemoveServers{})
 
-// 	num, _, _ := cs.CheckCommitted(25, 1)
-// 	if num != 0 {
-// 		t.Errorf("expected 0 commits found %d", num)
-// 	}
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
+	serverIds := []int{5, 6}
+	commandToServer := AddServers{ServerIds: serverIds}
 
-// 	cs.RestartPeer(uint64(origLeaderId))
-// 	time.Sleep(time.Duration(150) * time.Millisecond)
-// 	newLeaderId, _, _ := cs.CheckUniqueLeader()
-// 	cs.SubmitToServer(newLeaderId, 27)
-// 	time.Sleep(time.Duration(250) * time.Millisecond)
+	if success, _, err := cs.SubmitToServer(origLeaderId, commandToServer); success {
+		if err != nil {
+			t.Errorf("Could not submit command")
+		}
+	} else {
+		t.Errorf("Could not submit command")
+	}
 
-// 	num1, _, _ := cs.CheckCommitted(25, 0)
-// 	num2, _, _ := cs.CheckCommitted(27, 0)
+	time.Sleep(time.Duration(500) * time.Millisecond)
+	numServer := cs.activeServers.Size()
+	if numServer != 7 {
+		t.Errorf("Add Servers could not be completed expected 7 servers, found %d", numServer)
+	}
+}
 
-// 	if num1 != 5 || num2 != 5 {
-// 		t.Errorf("expected num1 = num2 = 5 found num1 = %d num2 = %d", num1, num2)
-// 	}
-// }
+func TestRemoveServerNonLeader(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	gob.Register(Write{})
+	gob.Register(Read{})
+	gob.Register(AddServers{})
+	gob.Register(RemoveServers{})
+
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
+	rem1 := (origLeaderId + 1) % 5
+	rem2 := (origLeaderId + 2) % 5
+	serverIds := []int{rem1, rem2}
+	commandToServer := RemoveServers{ServerIds: serverIds}
+
+	if success, _, err := cs.SubmitToServer(origLeaderId, commandToServer); success {
+		if err != nil {
+			t.Errorf("Could not submit command")
+		}
+	} else {
+		t.Errorf("Could not submit command")
+	}
+
+	time.Sleep(time.Duration(500) * time.Millisecond)
+	numServer := cs.activeServers.Size()
+	if numServer != 3 {
+		t.Errorf("Remove Servers could not be completed expected 3 servers, found %d", numServer)
+	}
+}
+
+func TestRemoveLeader(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
+	cs := CreateNewCluster(t, 5)
+	defer cs.Shutdown()
+
+	gob.Register(Write{})
+	gob.Register(Read{})
+	gob.Register(AddServers{})
+	gob.Register(RemoveServers{})
+
+	origLeaderId, _, _ := cs.CheckUniqueLeader()
+	serverIds := []int{origLeaderId}
+	commandToServer := RemoveServers{ServerIds: serverIds}
+
+	if success, _, err := cs.SubmitToServer(origLeaderId, commandToServer); success {
+		if err != nil {
+			t.Errorf("Could not submit command")
+		}
+	} else {
+		t.Errorf("Could not submit command")
+	}
+
+	time.Sleep(time.Duration(500) * time.Millisecond)
+	numServer := cs.activeServers.Size()
+	if numServer != 4 {
+		t.Errorf("Remove Servers could not be completed expected 3 servers, found %d", numServer)
+	}
+
+	newLeaderId, _, _ := cs.CheckUniqueLeader()
+	if origLeaderId == newLeaderId {
+		t.Errorf("Expected New Leader to be different, Found Same ")
+	}
+}
