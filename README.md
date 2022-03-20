@@ -199,7 +199,7 @@ To get a local copy up and running follow these simple example steps.
 
 ### Installation
 
-_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [User interaction with the system](#user-interaction-with-the-system) can be used to interact with the system._
+_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [Usage](#usage) can be used to interact with the system._
 
 1. Clone the repo
    ```sh
@@ -235,6 +235,19 @@ _To interact with the system from the console, do the following steps\:_
     go run main.go
     ```
 3.  You will be presented with a menu with necessary commands to create raft cluster, send commands, etc.
+
+### Running tests 
+
+_A comprehensive set of tests has been provided in **raft/raft_test.go**. In order to run these tests, do the following steps\:_
+
+1.  To run a particular test execute the following command from the main project directory
+    ```sh
+    go test -timeout 30s -v -run ^[Test Name]$ raft-consensus/raft
+    ```
+2.  To run the entire test suite run the following command from the main project directory
+    ```sh
+    go test -v raft-consensus/raft
+    ```
 
 - [ ] Write about visualizations
 - [ ] Add screenshots
