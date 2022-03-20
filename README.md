@@ -199,7 +199,7 @@ To get a local copy up and running follow these simple example steps.
 
 ### Installation
 
-_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [User interaction with the system](#usage) can be used to interact with the system._
+_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [Usage](#usage) can be used to interact with the system._
 
 1. Clone the repo
    ```sh
