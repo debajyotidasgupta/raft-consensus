@@ -9,8 +9,6 @@
 *** Thanks again! Now go create something AMAZING! :D
 -->
 
-
-
 <!-- PROJECT SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
@@ -19,14 +17,13 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
+
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
-
-
 
 <!-- PROJECT LOGO -->
 <br />
@@ -50,8 +47,6 @@
     <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
   </p>
 </div>
-
-
 
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -78,74 +73,113 @@
   </ol>
 </details>
 
-
-
 <!-- ABOUT THE PROJECT -->
+
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+![Screen Shot](images/overall.png)
 
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
+This project demonstrates the implementation of the `Raft Consensus algorithm` which is a consensus bases protocol for distributed systems. This project is built as a part of the course `CS60002` **_Distributed Systems_** at Indian Institute of Technology, Kharagpur. This project implements a simple version of the raft protocol, which can be used as a base template to build your own distributed system by adding features. Following are the core features implemented in this projects:
 
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
+- Raft Consensus RPCs
+  - `RequestVote` RPC
+  - `AppendEntries` RPC
+- Raft Log
+  - `Log` class
+- Raft State Machine
+  - `StateMachine` (a simple state machine)
+- Raft Leader Election
+  - `LeaderElection` RPC
+- Raft Consensus
+  - `RaftConsensus` class
+- `Membership Change` Feature
+- Visualization with `timing diagram`
+- Single `client interface` for testing the features
 
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
-
-Use the `BLANK_README.md` to get started.
+A single client interface was built mainly because this is a simple working protoype and not industrial-strength distributed system. The client interface is a simple command line interface which can be used to test the features of the project. All the RPCs are implemented in accordance with [In Search of an Understandable Consensus Algorithm](https://raft.github.io/raft.pdf) by Diego Ongaro and John Ousterhout. This implementation of the raft can be used as a base model and can be extended to build your own distributed system by adding advanced features and implementing multiple client gateway.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
-
-
 
 ### Built With
 
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
+Following mentioned are the major frameworks/libraries used to bootstrap this project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
 
-* [Next.js](https://nextjs.org/)
-* [React.js](https://reactjs.org/)
-* [Vue.js](https://vuejs.org/)
-* [Angular](https://angular.io/)
-* [Svelte](https://svelte.dev/)
-* [Laravel](https://laravel.com)
-* [Bootstrap](https://getbootstrap.com)
-* [JQuery](https://jquery.com)
+- [Golang](https://go.dev/)
+  - [Leak Test](github.com/fortytw2/leaktest) - _Required for memory leak testing_
+  - [Pretty Tables](github.com/jedib0t/go-pretty) - _Used in Timing Diagram visualization_
+  - [net/rpc](https://pkg.go.dev/net/rpc) - _Wrappers required for building Raft RPCs_
+- [Shell Script](https://www.javatpoint.com/shell-scripting-tutorial)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
-
 
 ## Project Details
 
 Add the details of the project here. Mainly add the following
+
 - [ ] Description of each file and their functioning
 - [ ] If the code is divided in classes or as per use case, mention the working of the class
 - [ ] Mention the important variables and describe them
 - [ ] If possible add a short theory to support your descriptions
 
-### raft/server.go
-*This file contains all the necessary code for implementing servers in a network using TCP
-along with various Remote Procedural Calls*
+```
+raft-consensus
+├──── LICENSE
+├──── README.md
+├──── go.mod
+├──── go.sum
+├──── images
+│     └── overall.png
+├──── main.go
+├──── raft
+│     ├── config.go
+│     ├── raft.go
+│     ├── raft_test.go
+│     ├── server.go
+│     ├── simulator.go
+│     └── storage.go
+└──── utils
+      ├── logs
+      ├── visualize.sh
+      ├── viz.go
+      └── viz.txt
+```
 
-#### Server struct
-Structure to define a service object
-#### Server methods
-*CreateServer\:* create a Server Instance with serverId and list of peerIds  
-*ConnectionAccept\:* keep listening for incoming connections and serve them  
-*Serve\:* start a new service  
-*Stop\:* stop an existing service  
-*ConnectToPeer\:* connect to another server or peer  
-*DisconnectPeer\:* disconnect from a particular peer  
-*RPC\:* make an RPC call to the particular peer  
-*RequestVote\:* RPC call from a raft node for RequestVote  
-*AppendEntries\:* RPC call from a raft node for AppendEntries  
+Following are the details of the file structure and their functionalities that are present in this code base.
 
+- **raft/server.go** - _This file contains all the necessary code for implementing servers in a network using TCP along with various Remote Procedural Calls_
+  - `Server struct` - Structure to define a service object
+  - `Server` methods - Methods to implement the server
+    - **_CreateServer\:_** create a Server Instance with serverId and list of peerIds
+    - **_ConnectionAccept\:_** keep listening for incoming connections and serve them
+    - **_Serve\:_** start a new service
+    - **_Stop\:_** stop an existing service
+    - **_ConnectToPeer\:_** connect to another server or peer
+    - **_DisconnectPeer\:_** disconnect from a particular peer
+    - **_RPC\:_** make an RPC call to the particular peer
+    - **_RequestVote\:_** RPC call from a raft node for RequestVote
+    - **_AppendEntries\:_** RPC call from a raft node for AppendEntries
+- **raft/simulator.go** - _This file contains all the necessary code to setup a cluster of raft nodes, interact with the cluster and execute different commands such as read, write and config change on the cluster._
+  - `ClusterSimulator` struct - Structure to define a Raft cluster
+  - `Simulator` methods - Methods to implement the cluster
+    - **_CreateNewCluster\:_** create a new Raft cluster consisting of a given number of nodes and establish
+    - connections between them
+    - **_Shutdown\:_** shut down all servers in the cluster
+    - **_CollectCommits\:_** reads channel and adds all received entries to the corresponding commits
+    - **_DisconnectPeer\:_** disconnect a server from other servers
+    - **_ReconnectPeer\:_** reconnect a disconnected server to other servers
+    - **_CrashPeer\:_** crash a server and shut it down
+    - **_RestartPeer\:_** restart a crashed server and reconnect to other peers
+    - **_SubmitToServer\:_** submit a command to a server
+    - **_Check_Functions\:_** auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader, CheckNoLeader and CheckCommitted
+- **raft/raft_test.go** - _This file has a set of test functions designed to test the various functionalities of the raft protocol. The tests can be designed into 3 major classes:_
+  - **_Tests to check Leader Election_**
+  - **_Tests to check Command Commits_**
+  - **_Tests to check Membership Changes_**
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-
 <!-- GETTING STARTED -->
+
 ## Getting Started
 
 This is an example of how you may give instructions on setting up your project locally.
@@ -153,13 +187,9 @@ To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
-- [ ] Tell about installing clean `GO`
-  
+- **Go**  
+  To run the code in this Assignment, one needs to have Go installed in their system. If it is not
+  already installed, it can be done by following the steps in [Install Go Ubuntu](https://www.tecmint.com/install-go-in-ubuntu/#:~:text=To%20download%20the%20latest%20version,download%20it%20on%20the%20terminal.&text=Next%2C%20extract%20the%20tarball%20to%20%2Fusr%2Flocal%20directory.&text=Add%20the%20go%20binary%20path,a%20system%2Dwide%20installation)
 
 ### Installation
 
@@ -176,50 +206,51 @@ _Below is an example of how you can instruct your audience on installing and set
    ```
 4. Enter your API in `config.js`
    ```js
-   const API_KEY = 'ENTER YOUR API';
+   const API_KEY = "ENTER YOUR API";
    ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 - [ ] Include details about git clone and running after unzipping submission
 - [ ] Installing dependencies
-- [ ] Set `DEBUG` and any other ***SECRET KEY***
-
+- [ ] Set `DEBUG` and any other **_SECRET KEY_**
 
 <!-- USAGE EXAMPLES -->
+
 ## Usage
 
 Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
 
- - [ ] Write about main.go
- ### User interaction with the system
- *To interact with the system from the console, do the following steps\:*
+- [ ] Write about main.go
 
- 1. Open terminal from the main project directory
- 2. Run the main go file
+### User interaction with the system
+
+_To interact with the system from the console, do the following steps\:_
+
+1.  Open terminal from the main project directory
+2.  Run the main go file
     ```sh
     go run main.go
     ```
- 3. You will be presented with a menu with necessary commands to create raft cluster, send commands, etc.
- - [ ] Write about visualizations
- - [ ] Add screenshots
+3.  You will be presented with a menu with necessary commands to create raft cluster, send commands, etc.
+
+- [ ] Write about visualizations
+- [ ] Add screenshots
 
 _For more examples, please refer to the [Documentation](https://example.com)_
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-
-
 <!-- LICENSE -->
+
 ## License
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-
-
 <!-- CONTACT -->
+
 ## Contact
 
 Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
@@ -228,28 +259,26 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-
-
 <!-- ACKNOWLEDGMENTS -->
+
 ## Acknowledgments
 
 Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
 
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-* [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-* [Malven's Grid Cheatsheet](https://grid.malven.co/)
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
-* [Font Awesome](https://fontawesome.com)
-* [React Icons](https://react-icons.github.io/react-icons/search)
+- [Choose an Open Source License](https://choosealicense.com)
+- [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
+- [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
+- [Malven's Grid Cheatsheet](https://grid.malven.co/)
+- [Img Shields](https://shields.io)
+- [GitHub Pages](https://pages.github.com)
+- [Font Awesome](https://fontawesome.com)
+- [React Icons](https://react-icons.github.io/react-icons/search)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-
-
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+
 [contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
 [contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge

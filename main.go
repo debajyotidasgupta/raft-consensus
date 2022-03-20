@@ -241,11 +241,15 @@ func PrintMenu() {
 	fmt.Println("| 8  | shutdown             |      _                    |")
 	fmt.Println("| 9  | check leader         |      _                    |")
 	fmt.Println("| 10 | stop execution       |      _                    |")
-	fmt.Println("| 11 | add servers          |      [peerId]             |")
-	fmt.Println("| 12 | remove servers       |      [peerId]             |")
+	fmt.Println("| 11 | add servers          |      [peerIds]            |")
+	fmt.Println("| 12 | remove servers       |      [peerIds]            |")
 	fmt.Println("+----+----------------------+---------------------------+")
 	fmt.Println("")
 	fmt.Println("+-----------------      USER      ----------------------+")
+	fmt.Println("+                                                       +")
+	fmt.Println("+ User input should be of the format:  Sr ...Arguments  +")
+	fmt.Println("+ Example:  2 4 1 3                                     +")
+	fmt.Println("+-------------------------------------------------------+")
 	fmt.Println("")
 }
 
