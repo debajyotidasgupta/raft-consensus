@@ -131,15 +131,15 @@ along with various Remote Procedural Calls*
 #### Server struct
 Structure to define a service object
 #### Server methods
-*CreateServer\:* create a Server Instance with serverId and list of peerIds  
-*ConnectionAccept\:* keep listening for incoming connections and serve them  
-*Serve\:* start a new service  
-*Stop\:* stop an existing service  
-*ConnectToPeer\:* connect to another server or peer  
-*DisconnectPeer\:* disconnect from a particular peer  
-*RPC\:* make an RPC call to the particular peer  
-*RequestVote\:* RPC call from a raft node for RequestVote  
-*AppendEntries\:* RPC call from a raft node for AppendEntries  
+***CreateServer\:*** create a Server Instance with serverId and list of peerIds  
+***ConnectionAccept\:*** keep listening for incoming connections and serve them  
+***Serve\:*** start a new service  
+***Stop\:*** stop an existing service  
+***ConnectToPeer\:*** connect to another server or peer  
+***DisconnectPeer\:*** disconnect from a particular peer  
+***RPC\:*** make an RPC call to the particular peer  
+***RequestVote\:*** RPC call from a raft node for RequestVote  
+***AppendEntries\:*** RPC call from a raft node for AppendEntries  
 
 ### raft/simulator.go
 *This file contains all the necessary code to setup a cluster of raft nodes, interact with the 
@@ -148,24 +148,24 @@ cluster and execute different commands such as read, write and config change on 
 #### ClusterSimulator struct
 Structure to define a Raft cluster
 #### Simulator methods
-*CreateNewCluster\:* create a new Raft cluster consisting of a given number of nodes and establish
+***CreateNewCluster\:*** create a new Raft cluster consisting of a given number of nodes and establish
 connections between them  
-*Shutdown\:* shut down all servers in the cluster  
-*CollectCommits\:* reads channel and adds all received entries to the corresponding commits  
-*DisconnectPeer\:* disconnect a server from other servers  
-*ReconnectPeer\:* reconnect a disconnected server to other servers  
-*CrashPeer\:* crash a server and shut it down  
-*RestartPeer\:* restart a crashed server and reconnect to other peers  
-*SubmitToServer\:* submit a command to a server  
-*Check_Functions\:* auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader,
+***Shutdown\:*** shut down all servers in the cluster  
+***CollectCommits\:*** reads channel and adds all received entries to the corresponding commits  
+***DisconnectPeer\:*** disconnect a server from other servers  
+***ReconnectPeer\:*** reconnect a disconnected server to other servers  
+***CrashPeer\:*** crash a server and shut it down  
+***RestartPeer\:*** restart a crashed server and reconnect to other peers  
+***SubmitToServer\:*** submit a command to a server  
+***Check_Functions\:*** auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader,
 CheckNoLeader and CheckCommitted  
 
 ### raft/raft_test.go
 *This file has a set of test functions designed to test the various functionalities of the raft protocol.
 The tests can be designed into 3 major classes:*  
-*Tests to check Leader Election*  
-*Tests to check Command Commits*  
-*Tests to check Membership Changes*  
+***Tests to check Leader Election***  
+***Tests to check Command Commits***  
+***Tests to check Membership Changes***  
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
