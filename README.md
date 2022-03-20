@@ -171,11 +171,11 @@ Following are the details of the file structure and their functionalities that a
   - **_Tests to check Command Commits_**
   - **_Tests to check Membership Changes_**
 - **raft/config.go** - _This file has a custom implementation of a Set Data Structure as it is not provided inherently by Go. This implementation is inspired by [Set in Golang](https://golangbyexample.com/set-implementation-in-golang/). It provides the following functions:_
-  - **_makeSet_**
-  - **_Exists_**
-  - **_Add_**
-  - **_Remove_**
-  - **_Size_**
+  - **_makeSet\:_** make a new set of type uint64
+  - **_Exists\:_** check if an element exists in the set
+  - **_Add\:_** add a new element to the set
+  - **_Remove\:_** remove an element from the set
+  - **_Size\:_** get the number of elements in the set
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -271,9 +271,9 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Contact
 
-Sagnik Roy - 18CS10063 - sagnikr38@gmail.com
-Somnath Jena -  -
-Debajyoti Dasgupta -  -
+Sagnik Roy         - 18CS10063 - sagnikr38@gmail.com  
+Somnath Jena       - 18CS30047 - somnathjena.2011@gmail.com  
+Debajyoti Dasgupta - 18CS30051 - debajyotidasgupta6@gmail.com  
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
