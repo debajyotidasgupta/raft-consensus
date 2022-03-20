@@ -271,9 +271,10 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
+Sagnik Roy - 18CS10063 - sagnikr38@gmail.com
+Somnath Jena -  -
+Debajyoti Dasgupta -  -
 
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
