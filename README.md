@@ -188,8 +188,7 @@ Following are the details of the file structure and their functionalities that a
 
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+To get a local copy up and running follow these simple steps.
 
 ### Prerequisites
 
@@ -211,19 +210,15 @@ _In order to setup a local copy of the project, you can follow the one of the 2 
 
 ### Setting DEBUG level
 _In order to obtain logs regarding the execution of Raft algorithm you need to set DEBUG variable as 1 inside raft/raft.go_  
-_Similarly if you do not wish to see huge logs and just see the outputs of execution you can set the DEBUG level to 0_
+_Similarly if you do not wish to see huge logs and just see the outputs of execution you can set the DEBUG level to 0 (recommended)_
 
-- [ ] Include details about git clone and running after unzipping submission
-- [ ] Installing dependencies
-- [ ] Set `DEBUG` and any other **_SECRET KEY_**
 
 <!-- USAGE EXAMPLES -->
 
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+Once the local copy of the project has been setup, follow these steps to interact with the system and run tests on the system
 
-- [ ] Write about main.go
 
 ### User interaction with the system
 
