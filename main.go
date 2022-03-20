@@ -58,7 +58,7 @@ func SetData(cluster *raft.ClusterSimulator, key string, val int, serverParam ..
 	if success, _, _ = cluster.SubmitToServer(serverId, commandToServer); success {
 		return nil
 	} else {
-		return errors.New("command could not be submitted, try different server")
+		return errors.New("command could not be submitted, try different server(leader)")
 	}
 }
 
@@ -90,7 +90,7 @@ func GetData(cluster *raft.ClusterSimulator, key string, serverParam ...int) (in
 			return value, nil
 		}
 	} else {
-		return 0, errors.New("command could not be submitted, try different server")
+		return 0, errors.New("command could not be submitted, try different server(leader)")
 	}
 }
 
@@ -227,29 +227,29 @@ func Stop(cluster *raft.ClusterSimulator) error {
 }
 
 func PrintMenu() {
-	fmt.Println("\n\n           RAFT MENU: [nodes are 0 indexed]")
-	fmt.Println("+---------------------------+---------------------------+")
-	fmt.Println("| Sr |  USER COMMANDS       |      ARGUMENTS            |")
-	fmt.Println("+----+----------------------+---------------------------+")
-	fmt.Println("| 1  | create cluster       |      number of nodes      |")
-	fmt.Println("| 2  | set data             |      key, value, [peerId] |")
-	fmt.Println("| 3  | get data             |      key, [peerId]        |")
-	fmt.Println("| 4  | disconnect peer      |      peerId               |")
-	fmt.Println("| 5  | reconnect peer       |      peerId               |")
-	fmt.Println("| 6  | crash peer           |      peerId               |")
-	fmt.Println("| 7  | restart peer         |      peerId               |")
-	fmt.Println("| 8  | shutdown             |      _                    |")
-	fmt.Println("| 9  | check leader         |      _                    |")
-	fmt.Println("| 10 | stop execution       |      _                    |")
-	fmt.Println("| 11 | add servers          |      [peerIds]            |")
-	fmt.Println("| 12 | remove servers       |      [peerIds]            |")
-	fmt.Println("+----+----------------------+---------------------------+")
+	fmt.Println("\n\n           	RAFT MENU: [nodes are 0 indexed]")
+	fmt.Println("+---------------------------+------------------------------------+")
+	fmt.Println("| Sr |  USER COMMANDS       |      ARGUMENTS                     |")
+	fmt.Println("+----+----------------------+------------------------------------+")
+	fmt.Println("| 1  | create cluster       |      number of nodes               |")
+	fmt.Println("| 2  | set data             |      key, value, peerId (optional) |")
+	fmt.Println("| 3  | get data             |      key, peerId (optional)        |")
+	fmt.Println("| 4  | disconnect peer      |      peerId                        |")
+	fmt.Println("| 5  | reconnect peer       |      peerId                        |")
+	fmt.Println("| 6  | crash peer           |      peerId                        |")
+	fmt.Println("| 7  | restart peer         |      peerId                        |")
+	fmt.Println("| 8  | shutdown             |      _                             |")
+	fmt.Println("| 9  | check leader         |      _                             |")
+	fmt.Println("| 10 | stop execution       |      _                             |")
+	fmt.Println("| 11 | add servers          |      [peerIds]                     |")
+	fmt.Println("| 12 | remove servers       |      [peerIds]                     |")
+	fmt.Println("+----+----------------------+------------------------------------+")
 	fmt.Println("")
-	fmt.Println("+-----------------      USER      ----------------------+")
-	fmt.Println("+                                                       +")
-	fmt.Println("+ User input should be of the format:  Sr ...Arguments  +")
-	fmt.Println("+ Example:  2 4 1 3                                     +")
-	fmt.Println("+-------------------------------------------------------+")
+	fmt.Println("+--------------------      USER      ----------------------------+")
+	fmt.Println("+                                                                +")
+	fmt.Println("+ User input should be of the format:  Sr ...Arguments           +")
+	fmt.Println("+ Example:  2 4 1 3                                              +")
+	fmt.Println("+----------------------------------------------------------------+")
 	fmt.Println("")
 }
 

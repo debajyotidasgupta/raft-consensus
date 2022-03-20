@@ -211,6 +211,10 @@ _Below is an example of how you can instruct your audience on installing and set
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+### Setting DEBUG level
+_In order to obtain logs regarding the execution of Raft algorithm you need to set DEBUG variable as 1 inside raft/raft.go_  
+_Similarly if you do not wish to see huge logs and just see the outputs of execution you can set the DEBUG level to 0_
+
 - [ ] Include details about git clone and running after unzipping submission
 - [ ] Installing dependencies
 - [ ] Set `DEBUG` and any other **_SECRET KEY_**
