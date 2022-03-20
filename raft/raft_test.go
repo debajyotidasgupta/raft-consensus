@@ -730,7 +730,7 @@ func TestRemoveLeader(t *testing.T) {
 		t.Errorf("Could not submit command")
 	}
 
-	time.Sleep(time.Duration(500) * time.Millisecond)
+	time.Sleep(time.Duration(1000) * time.Millisecond)
 	numServer := cs.activeServers.Size()
 	if numServer != 4 {
 		t.Errorf("Remove Servers could not be completed expected 3 servers, found %d", numServer)
