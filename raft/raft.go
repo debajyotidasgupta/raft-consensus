@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const DEBUG = 1  // DEBUG is the debug level
+const DEBUG = 0  // DEBUG is the debug level
 type RNState int // RNState is the state of the Raft node
 
 const (
@@ -429,6 +429,31 @@ func (rn *RaftNode) leaderSendAEs() {
 	rn.mu.Lock()                       // Lock the mutex
 	savedCurrentTerm := rn.currentTerm // Save the current term
 	rn.mu.Unlock()                     // Unlock the mutex
+
+	// handling the case for a single node cluster
+	go func(peer uint64) {
+		if rn.peerList.Size() == 0 {
+			if uint64(len(rn.log)) > rn.commitIndex {
+				savedCommitIndex := rn.commitIndex
+				for i := rn.commitIndex + 1; i <= uint64(len(rn.log)); i++ {
+					if rn.log[i-1].Term == rn.currentTerm { //	If the term is the same as the current term, update the commit index
+						rn.commitIndex = i
+
+					}
+				}
+				if savedCommitIndex != rn.commitIndex {
+					rn.debug("Leader sets commitIndex := %d", rn.commitIndex)
+					// Commit index changed:  the  leader considers new  entries
+					// to be committed. Send  new  entries on the commit channel
+					// to this leader's clients, and notify followers by sending
+					// them Append Entries.
+
+					rn.newCommitReady <- struct{}{}
+					rn.trigger <- struct{}{}
+				}
+			}
+		}
+	}(rn.id)
 
 	for peer := range rn.peerList.peerSet {
 
