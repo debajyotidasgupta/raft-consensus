@@ -171,7 +171,7 @@ Following are the details of the file structure and their functionalities that a
     - **_RestartPeer\:_** restart a crashed server and reconnect to other peers
     - **_SubmitToServer\:_** submit a command to a server
     - **_Check_Functions\:_** auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader, CheckNoLeader and CheckCommitted
-- **raft/raft_test.go** - \_This file has a set of test functions designed to test the various functionalities of the raft protocol. The tests can be designed into 3 major classes:*
+- **raft/raft_test.go** - _This file has a set of test functions designed to test the various functionalities of the raft protocol. The tests can be designed into 3 major classes:_
   - **_Tests to check Leader Election_**
   - **_Tests to check Command Commits_**
   - **_Tests to check Membership Changes_**
