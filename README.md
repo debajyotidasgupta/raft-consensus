@@ -114,12 +114,7 @@ Following mentioned are the major frameworks/libraries used to bootstrap this pr
 
 ## Project Details
 
-Add the details of the project here. Mainly add the following
-
-- [ ] Description of each file and their functioning
-- [ ] If the code is divided in classes or as per use case, mention the working of the class
-- [ ] Mention the important variables and describe them
-- [ ] If possible add a short theory to support your descriptions
+Following are the details of the file structure of this project:
 
 ```
 raft-consensus
@@ -244,10 +239,23 @@ _A comprehensive set of tests has been provided in **raft/raft_test.go**. In ord
     go test -v raft-consensus/raft
     ```
 
-- [ ] Write about visualizations
-- [ ] Add screenshots
+### Visualizing Test Results
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+_The **utils** directory provides functionalities to cleanly visualize the test logs in the form of a timing diagram table. To visualize the test logs follow the steps below\:_
+
+1. Ensure that the DEBUG level is set to 1 in **raft/raft.go**
+    ```sh
+    const DEBUG = 1 
+    ``` 
+2.  Run a test and save its logs in the utils directory.
+    ```sh
+    go test -timeout 30s -v -run ^[Test Name]$ raft-consensus/raft > utils/logs
+    ```
+3.  Use the logs to generate the timing diagram using the **utils/viz.go** file
+    ```sh
+    cd utils  
+    go run viz.go < logs > viz.txt
+    ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
