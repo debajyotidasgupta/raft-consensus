@@ -159,19 +159,19 @@ Following are the details of the file structure and their functionalities that a
     - **_RequestVote\:_** RPC call from a raft node for RequestVote
     - **_AppendEntries\:_** RPC call from a raft node for AppendEntries
 - **raft/simulator.go** - _This file contains all the necessary code to setup a cluster of raft nodes, interact with the cluster and execute different commands such as read, write and config change on the cluster._
-- `ClusterSimulator` struct - Structure to define a Raft cluster
-- `Simulator` methods - Methods to implement the cluster
-  - **_CreateNewCluster\:_** create a new Raft cluster consisting of a given number of nodes and establish
-  - connections between them
-  - **_Shutdown\:_** shut down all servers in the cluster
-  - **_CollectCommits\:_** reads channel and adds all received entries to the corresponding commits
-  - **_DisconnectPeer\:_** disconnect a server from other servers
-  - **_ReconnectPeer\:_** reconnect a disconnected server to other servers
-  - **_CrashPeer\:_** crash a server and shut it down
-  - **_RestartPeer\:_** restart a crashed server and reconnect to other peers
-  - **_SubmitToServer\:_** submit a command to a server
-  - **_Check_Functions\:_** auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader, CheckNoLeader and CheckCommitted
-- raft/raft*test.go - \_This file has a set of test functions designed to test the various functionalities of the raft protocol. The tests can be designed into 3 major classes:*
+  - `ClusterSimulator` struct - Structure to define a Raft cluster
+  - `Simulator` methods - Methods to implement the cluster
+    - **_CreateNewCluster\:_** create a new Raft cluster consisting of a given number of nodes and establish
+    - connections between them
+    - **_Shutdown\:_** shut down all servers in the cluster
+    - **_CollectCommits\:_** reads channel and adds all received entries to the corresponding commits
+    - **_DisconnectPeer\:_** disconnect a server from other servers
+    - **_ReconnectPeer\:_** reconnect a disconnected server to other servers
+    - **_CrashPeer\:_** crash a server and shut it down
+    - **_RestartPeer\:_** restart a crashed server and reconnect to other peers
+    - **_SubmitToServer\:_** submit a command to a server
+    - **_Check_Functions\:_** auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader, CheckNoLeader and CheckCommitted
+- **raft/raft_test.go** - \_This file has a set of test functions designed to test the various functionalities of the raft protocol. The tests can be designed into 3 major classes:*
   - **_Tests to check Leader Election_**
   - **_Tests to check Command Commits_**
   - **_Tests to check Membership Changes_**
