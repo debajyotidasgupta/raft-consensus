@@ -15,7 +15,7 @@ import (
 
 type RNState int // RNState is the state of the Raft node
 
-const DEBUG = 1 // DEBUG is the debug level
+const DEBUG = 0 // DEBUG is the debug level
 const (
 	Follower  RNState = iota // Follower is the state of a Raft node that is a follower
 	Candidate                // Candidate is the state of a Raft node that is a candidate
@@ -277,6 +277,24 @@ func (rn *RaftNode) startElection() {
 	votesReceived := 1                 // We have already voted for self
 
 	rn.debug("Becomes Candidate (currentTerm=%d); log=%v", savedCurrentTerm, rn.log)
+
+	// Check majority, helpful in case of only 1 node in cluster
+	go func() {
+		rn.mu.Lock()
+		defer rn.mu.Unlock()
+
+		if rn.state != Candidate {
+			rn.debug("while waiting for majority, state = %v", rn.state)
+			return
+		}
+		if votesReceived*2 > rn.peerList.Size()+1 { // If we have majority votes, become leader
+
+			// Won the election so become leader
+			rn.debug("Wins election with %d votes", votesReceived)
+			rn.becomeLeader() // Become leader
+			return
+		}
+	}()
 
 	// Send RequestVote RPCs to all other peer servers concurrently.
 	for peer := range rn.peerList.peerSet {
