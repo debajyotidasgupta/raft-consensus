@@ -199,21 +199,14 @@ To get a local copy up and running follow these simple example steps.
 
 ### Installation
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below:_
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+1. Clone the repo
    ```sh
-   git clone https://github.com/your_username_/Project-Name.git
+   git clone https://github.com/debajyotidasgupta/raft-consensus
    ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = "ENTER YOUR API";
-   ```
+2. Unzip the attached submission to unpack all the files included with the project.  
+Once the files are setup, the steps listed in [User interaction with the system](#user-interaction-with-the-system) can be used to interact with the system.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
