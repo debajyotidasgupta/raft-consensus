@@ -175,6 +175,12 @@ Following are the details of the file structure and their functionalities that a
   - **_Tests to check Leader Election_**
   - **_Tests to check Command Commits_**
   - **_Tests to check Membership Changes_**
+- **raft/config.go** - _This file has a custom implementation of a Set Data Structure as it is not provided inherently by Go. This implementation is inspired by [Set in Golang](https://golangbyexample.com/set-implementation-in-golang/). It provides the following functions:_
+  - **_makeSet_**
+  - **_Exists_**
+  - **_Add_**
+  - **_Remove_**
+  - **_Size_**
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
