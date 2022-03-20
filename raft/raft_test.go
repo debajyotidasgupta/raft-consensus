@@ -466,7 +466,7 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	cs.SubmitToServer(origLeaderId, 5)
 	cs.SubmitToServer(origLeaderId, 6)
 
-	time.Sleep(time.Duration(300) * time.Millisecond)
+	time.Sleep(time.Duration(500) * time.Millisecond)
 	num, _, _ := cs.CheckCommitted(6, 0)
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
@@ -474,7 +474,7 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 
 	dPeerId := (origLeaderId + 1) % 3
 	cs.DisconnectPeer(uint64(dPeerId))
-	time.Sleep(time.Duration(300) * time.Millisecond)
+	time.Sleep(time.Duration(500) * time.Millisecond)
 
 	// Submit a new command; it will be committed but only to two servers.
 	cs.SubmitToServer(origLeaderId, 7)
@@ -485,9 +485,9 @@ func TestCommitWithDisconnectionAndRecover(t *testing.T) {
 	}
 	// Now reconnect dPeerId and wait a bit; it should find the new command too.
 	cs.ReconnectPeer(uint64(dPeerId))
-	time.Sleep(time.Duration(300) * time.Millisecond)
+	time.Sleep(time.Duration(500) * time.Millisecond)
 
-	time.Sleep(time.Duration(300) * time.Millisecond)
+	time.Sleep(time.Duration(500) * time.Millisecond)
 	num, _, _ = cs.CheckCommitted(7, 0)
 	if num != 3 {
 		t.Errorf("expected 3 commits found = %d", num)
