@@ -199,14 +199,13 @@ To get a local copy up and running follow these simple example steps.
 
 ### Installation
 
-_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below:_
+_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [User interaction with the system](#user-interaction-with-the-system) can be used to interact with the system._
 
 1. Clone the repo
    ```sh
    git clone https://github.com/debajyotidasgupta/raft-consensus
    ```
 2. Unzip the attached submission to unpack all the files included with the project.  
-Once the files are setup, the steps listed in [User interaction with the system](#user-interaction-with-the-system) can be used to interact with the system.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
