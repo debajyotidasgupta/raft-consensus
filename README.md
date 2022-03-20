@@ -102,16 +102,13 @@ A single client interface was built mainly because this is a simple working prot
 
 ### Built With
 
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
+Following mentioned are the major frameworks/libraries used to bootstrap this project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
 
-- [Next.js](https://nextjs.org/)
-- [React.js](https://reactjs.org/)
-- [Vue.js](https://vuejs.org/)
-- [Angular](https://angular.io/)
-- [Svelte](https://svelte.dev/)
-- [Laravel](https://laravel.com)
-- [Bootstrap](https://getbootstrap.com)
-- [JQuery](https://jquery.com)
+- [Golang](https://go.dev/)
+  - [Leak Test](github.com/fortytw2/leaktest) - _Required for memory leak testing_
+  - [Pretty Tables](github.com/jedib0t/go-pretty) - _Used in Timing Diagram visualization_
+  - [net/rpc](https://pkg.go.dev/net/rpc) - _Wrappers required for building Raft RPCs_
+- [Shell Script](https://www.javatpoint.com/shell-scripting-tutorial)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -124,57 +121,60 @@ Add the details of the project here. Mainly add the following
 - [ ] Mention the important variables and describe them
 - [ ] If possible add a short theory to support your descriptions
 
-### raft/server.go
+```
+raft-consensus
+├──── LICENSE
+├──── README.md
+├──── go.mod
+├──── go.sum
+├──── images
+│     └── overall.png
+├──── main.go
+├──── raft
+│     ├── config.go
+│     ├── raft.go
+│     ├── raft_test.go
+│     ├── server.go
+│     ├── simulator.go
+│     └── storage.go
+└──── utils
+      ├── logs
+      ├── visualize.sh
+      ├── viz.go
+      └── viz.txt
+```
 
-_This file contains all the necessary code for implementing servers in a network using TCP
-along with various Remote Procedural Calls_
+Following are the details of the file structure and their functionalities that are present in this code base.
 
-#### Server struct
-
-Structure to define a service object
-
-#### Server methods
-
-**_CreateServer\:_** create a Server Instance with serverId and list of peerIds  
-**_ConnectionAccept\:_** keep listening for incoming connections and serve them  
-**_Serve\:_** start a new service  
-**_Stop\:_** stop an existing service  
-**_ConnectToPeer\:_** connect to another server or peer  
-**_DisconnectPeer\:_** disconnect from a particular peer  
-**_RPC\:_** make an RPC call to the particular peer  
-**_RequestVote\:_** RPC call from a raft node for RequestVote  
-**_AppendEntries\:_** RPC call from a raft node for AppendEntries
-
-### raft/simulator.go
-
-_This file contains all the necessary code to setup a cluster of raft nodes, interact with the
-cluster and execute different commands such as read, write and config change on the cluster._
-
-#### ClusterSimulator struct
-
-Structure to define a Raft cluster
-
-#### Simulator methods
-
-**_CreateNewCluster\:_** create a new Raft cluster consisting of a given number of nodes and establish
-connections between them  
-**_Shutdown\:_** shut down all servers in the cluster  
-**_CollectCommits\:_** reads channel and adds all received entries to the corresponding commits  
-**_DisconnectPeer\:_** disconnect a server from other servers  
-**_ReconnectPeer\:_** reconnect a disconnected server to other servers  
-**_CrashPeer\:_** crash a server and shut it down  
-**_RestartPeer\:_** restart a crashed server and reconnect to other peers  
-**_SubmitToServer\:_** submit a command to a server  
-**_Check_Functions\:_** auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader,
-CheckNoLeader and CheckCommitted
-
-### raft/raft_test.go
-
-_This file has a set of test functions designed to test the various functionalities of the raft protocol.
-The tests can be designed into 3 major classes:_  
-**_Tests to check Leader Election_**  
-**_Tests to check Command Commits_**  
-**_Tests to check Membership Changes_**
+- **raft/server.go** - _This file contains all the necessary code for implementing servers in a network using TCP along with various Remote Procedural Calls_
+  - `Server struct` - Structure to define a service object
+  - `Server` methods - Methods to implement the server
+    - **_CreateServer\:_** create a Server Instance with serverId and list of peerIds
+    - **_ConnectionAccept\:_** keep listening for incoming connections and serve them
+    - **_Serve\:_** start a new service
+    - **_Stop\:_** stop an existing service
+    - **_ConnectToPeer\:_** connect to another server or peer
+    - **_DisconnectPeer\:_** disconnect from a particular peer
+    - **_RPC\:_** make an RPC call to the particular peer
+    - **_RequestVote\:_** RPC call from a raft node for RequestVote
+    - **_AppendEntries\:_** RPC call from a raft node for AppendEntries
+- **raft/simulator.go** - _This file contains all the necessary code to setup a cluster of raft nodes, interact with the cluster and execute different commands such as read, write and config change on the cluster._
+- `ClusterSimulator` struct - Structure to define a Raft cluster
+- `Simulator` methods - Methods to implement the cluster
+  - **_CreateNewCluster\:_** create a new Raft cluster consisting of a given number of nodes and establish
+  - connections between them
+  - **_Shutdown\:_** shut down all servers in the cluster
+  - **_CollectCommits\:_** reads channel and adds all received entries to the corresponding commits
+  - **_DisconnectPeer\:_** disconnect a server from other servers
+  - **_ReconnectPeer\:_** reconnect a disconnected server to other servers
+  - **_CrashPeer\:_** crash a server and shut it down
+  - **_RestartPeer\:_** restart a crashed server and reconnect to other peers
+  - **_SubmitToServer\:_** submit a command to a server
+  - **_Check_Functions\:_** auxiliary helper functions to check the status of the raft cluster: CheckUniqueLeader, CheckNoLeader and CheckCommitted
+- raft/raft*test.go - \_This file has a set of test functions designed to test the various functionalities of the raft protocol. The tests can be designed into 3 major classes:*
+  - **_Tests to check Leader Election_**
+  - **_Tests to check Command Commits_**
+  - **_Tests to check Membership Changes_**
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
