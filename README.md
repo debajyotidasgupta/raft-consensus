@@ -304,7 +304,7 @@ Once the local copy of the project has been setup, follow these steps to interac
 _To interact with the system from the console, do the following steps\:_
 
 1.  Open terminal from the main project directory
-2.  Run the main go file
+2.  Run the main go file (Ensure that `DEBUG` is set to `0` in `raft/raft.go` file)
     ```sh
     go run main.go
     ```

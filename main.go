@@ -275,6 +275,9 @@ func main() {
 	gob.Register(raft.AddServers{})
 	gob.Register(raft.RemoveServers{})
 
+	fmt.Println("\n\n=============================================================")
+	fmt.Println("=    Ensure that you set [DEBUG=0] in [raft/raft.go] file   =")
+	fmt.Println("=============================================================")
 	PrintMenu()
 
 	for {
