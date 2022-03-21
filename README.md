@@ -124,9 +124,11 @@ raft-consensus
 ├──── go.mod
 ├──── go.sum
 ├──── images
+│     └── logo.png
 │     └── overall.png
 │     └── test1.png
 │     └── test2.png
+│     └── timing.png
 ├──── main.go
 ├──── raft
 │     ├── config.go
