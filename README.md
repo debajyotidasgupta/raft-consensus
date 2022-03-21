@@ -203,7 +203,7 @@ Following are the details of the file structure and their functionalities that a
     - **_NextIndex\:_** Next index of the follower
     - **_MatchIndex\:_** Match index of the follower
     - **_server\:_** Server object of the raft node
-    - **_db_\:\_** Database object of the raft node
+    - **_db_\:_** Database object of the raft node
     - **_commitChan\:_** Channel to send the commit index of logs to the state machine
     - **_newCommitReady\:_** Internal channel used to notify that new log entries may be sent on commitChan
     - **_trigger\:_** Trigger AppendEntries RPC when some relevant condition is met
