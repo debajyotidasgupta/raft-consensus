@@ -203,7 +203,7 @@ Following are the details of the file structure and their functionalities that a
     - **_NextIndex\:_** Next index of the follower
     - **_MatchIndex\:_** Match index of the follower
     - **_server\:_** Server object of the raft node
-    - **_db_\:_** Database object of the raft node
+    - **_db_\:\_** Database object of the raft node
     - **_commitChan\:_** Channel to send the commit index of logs to the state machine
     - **_newCommitReady\:_** Internal channel used to notify that new log entries may be sent on commitChan
     - **_trigger\:_** Trigger AppendEntries RPC when some relevant condition is met
@@ -269,17 +269,28 @@ To get a local copy up and running follow these simple steps.
 
 _In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [Usage](#usage) can be used to interact with the system._
 
-1. Clone the repo
+1. `Clone` the repo
    ```sh
    git clone https://github.com/debajyotidasgupta/raft-consensus
    ```
-2. Unzip the attached submission to unpack all the files included with the project.
+2. Alternatively, `unzip` the attached submission zip file to unpack all the files included with the project.
+   ```sh
+   unzip <submission_file.zip>
+   ```
+3. Change directory to the `raft-consensus` directory
+   ```sh
+   cd raft-consensus
+   ```
+4. If some dependency is missing, `install` it with the following command
+   ```go
+   go get <dependency>
+   ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ### Setting DEBUG level
 
-_In order to obtain logs regarding the execution of Raft algorithm you need to set DEBUG variable as 1 inside raft/raft.go_  
+_In order to obtain logs regarding the execution of Raft algorithm you need to set DEBUG variable as 1 inside raft/raft.go_
 _Similarly if you do not wish to see huge logs and just see the outputs of execution you can set the DEBUG level to 0 (recommended)_
 
 <!-- USAGE EXAMPLES -->
@@ -323,6 +334,9 @@ _The **utils** directory provides functionalities to cleanly visualize the test 
    ```sh
    const DEBUG = 1
    ```
+
+````
+
 2. Run a test and save its logs in the utils directory (execute from root project folder `raft-consensus`).
    ```sh
    go test -timeout 30s -v -run ^[Test Name]$ raft-consensus/raft > utils/logs.txt
@@ -400,3 +414,4 @@ List of resources we found helpful and we would like to give them some credits.
 [license-url]: https://github.com/debajyotidasgupta/raft-consensus/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/debajyoti-dasgupta/
+````
