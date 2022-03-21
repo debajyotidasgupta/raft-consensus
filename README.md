@@ -413,7 +413,3 @@ List of resources we found helpful and we would like to give them some credits.
 [license-url]: https://github.com/debajyotidasgupta/raft-consensus/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/debajyoti-dasgupta/
-
-```
-
-```
