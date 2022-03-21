@@ -28,23 +28,23 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+  <a href="https://github.com/debajyotidasgupta/raft-consensus">
+    <img src="./images/logo.png" alt="Logo">
   </a>
 
-  <h3 align="center">Best-README-Template</h3>
+  <h3 align="center">Raft Consensus</h3>
 
   <p align="center">
-    An awesome README template to jumpstart your projects!
+    A prototype for demonstrating the raft consensus algorithm.
     <br />
-    <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/debajyotidasgupta/raft-consensus/wiki"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
+    <a href="https://github.com/debajyotidasgupta/raft-consensus">View Demo</a>
     ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
+    <a href="https://github.com/debajyotidasgupta/raft-consensus/issues">Report Bug</a>
     ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
+    <a href="https://github.com/debajyotidasgupta/raft-consensus/issues">Request Feature</a>
   </p>
 </div>
 
@@ -63,6 +63,7 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#installation">Installation</a></li>
+        <li><a href="#setting-debug-level">Setting DEBUG level</a></li>
       </ul>
     </li>
     <li><a href="#project-details">Project Details</a></li>
@@ -79,7 +80,7 @@
 
 ![Screen Shot](images/overall.png)
 
-This project demonstrates the implementation of the `Raft Consensus algorithm` which is a consensus bases protocol for distributed systems. This project is built as a part of the course `CS60002` **_Distributed Systems_** at Indian Institute of Technology, Kharagpur. This project implements a simple version of the raft protocol, which can be used as a base template to build your own distributed system by adding features. Following are the core features implemented in this projects:
+This project demonstrates the implementation of the `Raft Consensus algorithm` which is a consensus based protocol for distributed systems. This project is built as a part of the course `CS60002` **_Distributed Systems_** at Indian Institute of Technology, Kharagpur. This project implements a simple version of the raft protocol, which can be used as a base template to build your own distributed system by adding features. Following are the core features implemented in this projects:
 
 - Raft Consensus RPCs
   - `RequestVote` RPC
@@ -102,7 +103,7 @@ A single client interface was built mainly because this is a simple working prot
 
 ### Built With
 
-Following mentioned are the major frameworks/libraries used to bootstrap this project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
+Following mentioned are the major frameworks/libraries used to bootstrap this project. Also included are the dependencies and addons used in this project.
 
 - [Golang](https://go.dev/)
   - [Leak Test](github.com/fortytw2/leaktest) - _Required for memory leak testing_
@@ -114,12 +115,7 @@ Following mentioned are the major frameworks/libraries used to bootstrap this pr
 
 ## Project Details
 
-Add the details of the project here. Mainly add the following
-
-- [ ] Description of each file and their functioning
-- [ ] If the code is divided in classes or as per use case, mention the working of the class
-- [ ] Mention the important variables and describe them
-- [ ] If possible add a short theory to support your descriptions
+Following are the details of the file structure of this project:
 
 ```
 raft-consensus
@@ -128,7 +124,11 @@ raft-consensus
 ├──── go.mod
 ├──── go.sum
 ├──── images
+│     └── logo.png
 │     └── overall.png
+│     └── test1.png
+│     └── test2.png
+│     └── timing.png
 ├──── main.go
 ├──── raft
 │     ├── config.go
@@ -138,10 +138,10 @@ raft-consensus
 │     ├── simulator.go
 │     └── storage.go
 └──── utils
-      ├── logs
-      ├── visualize.sh
       ├── viz.go
-      └── viz.txt
+      ├── visualize.sh
+      ├── sample_logs.txt
+      └── sample_output.txt
 ```
 
 Following are the details of the file structure and their functionalities that are present in this code base.
@@ -158,6 +158,72 @@ Following are the details of the file structure and their functionalities that a
     - **_RPC\:_** make an RPC call to the particular peer
     - **_RequestVote\:_** RPC call from a raft node for RequestVote
     - **_AppendEntries\:_** RPC call from a raft node for AppendEntries
+- **raft/raft.go** - This file contains the implementation of the Raft Consensus algorithm
+  - `RNState` - Enum to define the state of the Raft Node
+    - **_Follower\:_** Follower state
+    - **_Candidate\:_** Candidate state
+    - **_Leader\:_** Leader state
+    - **_Dead\:_** Dead/Shutdown state
+  - `CommitEntry` - Structure to define a commit entry
+    - **_Command\:_** Command to be executed
+    - **_Term\:_** Term in which the command was executed
+    - **_Index\:_** Index of the command in the log
+  - `LogEntry` - Structure to define a log entry
+    - **_Command\:_** Command to be executed
+    - **_Index\:_** Index of the command in the log
+  - `RequestVoteArgs` - Structure to define the arguments for RequestVote RPC
+    - **_Term\:_** Term of the candidate requesting vote
+    - **_CandidateId\:_** Id of the candidate requesting vote
+    - **_LastLogIndex\:_** Index of the last log entry
+    - **_LastLogTerm\:_** Term of the last log entry
+  - `RequestVoteReply` - Structure to define the reply for RequestVote RPC
+    - **_Term\:_** Term of the leader
+    - **_VoteGranted\:_** Vote granted or not
+  - `AppendEntriesArgs` - Structure to define the arguments for AppendEntries RPC
+    - **_Term\:_** Term of the leader
+    - **_LeaderId\:_** Id of the leader
+    - **_PrevLogIndex\:_** Index of the previous log entry
+    - **_PrevLogTerm\:_** Term of the previous log entry
+    - **_Entries\:_** List of log entries
+    - **_LeaderCommit\:_** Index of the leader's commit
+  - `AppendEntriesReply` - Structure to define the reply for AppendEntries RPC
+    - **_Term\:_** Term of the leader
+    - **_Success\:_** Success or not
+    - **_ConflictIndex\:_** Index of the conflicting log entry
+    - **_ConflictTerm\:_** Term of the conflicting log entry
+  - `RaftNode` - Structure to define a raft node
+    - **_id\:_** Id of the raft node
+    - **_peerList\:_** List of peers
+    - **_state\:_** State of the raft node
+    - **_currentTerm\:_** Current term of the raft node
+    - **_votedFor\:_** Id of the candidate voted for in the current term
+    - **_CommitIndex\:_** Index of the last committed entry
+    - **_lastApplied\:_** Index of the last applied entry
+    - **_Log\:_** Log of the raft node
+    - **_NextIndex\:_** Next index of the follower
+    - **_MatchIndex\:_** Match index of the follower
+    - **_server\:_** Server object of the raft node
+    - **_db_\:\_** Database object of the raft node
+    - **_commitChan\:_** Channel to send the commit index of logs to the state machine
+    - **_newCommitReady\:_** Internal channel used to notify that new log entries may be sent on commitChan
+    - **_trigger\:_** Trigger AppendEntries RPC when some relevant condition is met
+    - **_electionResetEvent\:_** Last time at which the election timer was reset
+  - `Raft utility` functions
+    - **_sendCommit\:_** Send the commit index to the state machine
+    - **_runElectionTimer\:_** Reset the election timer
+    - **_electionTimeout\:_** Set Election timeout
+    - **_startElection\:_** Start an election
+    - **_becomeLeader\:_** helper function to become the leader
+    - **_leaderSendAEs\:_** Send AppendEntries RPCs to all the followers in the cluster and update Node
+    - **_lastLogIndexAndTerm\:_** Get the last log index and term
+    - **_AppendEntries\:_** Send AppendEntries RPCs to all the followers
+    - **_RequestVote\:_** Send RequestVote RPCs to all the peers
+    - **_becomeFollower\:_** helper function to become the follower
+    - **_restoreFromStorage\:_** Restore the state of the raft node from storage
+    - **_readFromStorage\:_** Read the state of the raft node from storage
+    - **_Submit\:_** Submit a command to the raft node
+    - **_Stop\:_** Stop the raft node
+    - **_Report\:_** Report the state of the raft node
 - **raft/simulator.go** - _This file contains all the necessary code to setup a cluster of raft nodes, interact with the cluster and execute different commands such as read, write and config change on the cluster._
   - `ClusterSimulator` struct - Structure to define a Raft cluster
   - `Simulator` methods - Methods to implement the cluster
@@ -176,11 +242,14 @@ Following are the details of the file structure and their functionalities that a
   - **_Tests to check Command Commits_**
   - **_Tests to check Membership Changes_**
 - **raft/config.go** - _This file has a custom implementation of a Set Data Structure as it is not provided inherently by Go. This implementation is inspired by [Set in Golang](https://golangbyexample.com/set-implementation-in-golang/). It provides the following functions:_
-  - **_makeSet_**
-  - **_Exists_**
-  - **_Add_**
-  - **_Remove_**
-  - **_Size_**
+  - **_makeSet\:_** make a new set of type uint64
+  - **_Exists\:_** check if an element exists in the set
+  - **_Add\:_** add a new element to the set
+  - **_Remove\:_** remove an element from the set
+  - **_Size\:_** get the number of elements in the set
+- **util/viz.go** - _This file contains the visualization functions for the raft protocol. It is used to visualize the raft protocol's timing diagram_
+  - **ParseTestLog\:\_** parse the log file and return the list of commands
+  - **_TableViz\:_** visualize the raft protocol in a table format
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -188,8 +257,7 @@ Following are the details of the file structure and their functionalities that a
 
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+To get a local copy up and running follow these simple steps.
 
 ### Prerequisites
 
@@ -199,31 +267,37 @@ To get a local copy up and running follow these simple example steps.
 
 ### Installation
 
-_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [User interaction with the system](#user-interaction-with-the-system) can be used to interact with the system._
+_In order to setup a local copy of the project, you can follow the one of the 2 methods listed below. Once the local copy is setup, the steps listed in [Usage](#usage) can be used to interact with the system._
 
-1. Clone the repo
+1. `Clone` the repo
    ```sh
    git clone https://github.com/debajyotidasgupta/raft-consensus
    ```
-2. Unzip the attached submission to unpack all the files included with the project.  
+2. Alternatively, `unzip` the attached submission zip file to unpack all the files included with the project.
+   ```sh
+   unzip <submission_file.zip>
+   ```
+3. Change directory to the `raft-consensus` directory
+   ```sh
+   cd raft-consensus
+   ```
+4. If some dependency is missing, `install` it with the following command
+   ```go
+   go get <dependency>
+   ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ### Setting DEBUG level
-_In order to obtain logs regarding the execution of Raft algorithm you need to set DEBUG variable as 1 inside raft/raft.go_  
-_Similarly if you do not wish to see huge logs and just see the outputs of execution you can set the DEBUG level to 0_
 
-- [ ] Include details about git clone and running after unzipping submission
-- [ ] Installing dependencies
-- [ ] Set `DEBUG` and any other **_SECRET KEY_**
+_In order to obtain logs regarding the execution of Raft algorithm you need to set DEBUG variable as 1 inside raft/raft.go_
+_Similarly if you do not wish to see huge logs and just see the outputs of execution you can set the DEBUG level to 0 (recommended)_
 
 <!-- USAGE EXAMPLES -->
 
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-- [ ] Write about main.go
+Once the local copy of the project has been setup, follow these steps to interact with the system and run tests on the system
 
 ### User interaction with the system
 
@@ -236,10 +310,59 @@ _To interact with the system from the console, do the following steps\:_
     ```
 3.  You will be presented with a menu with necessary commands to create raft cluster, send commands, etc.
 
-- [ ] Write about visualizations
-- [ ] Add screenshots
+> **NOTE:** While using the features like set value, get value etc., that should pass through the leader node, you can user the 9th menu and find the leader and then send the request to leader node. Sending a such a request to a non leader node will lead to failure. This implementation is in accordance with the official Raft Implementation from the paper.
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+### Running tests
+
+_A comprehensive set of tests has been provided in **raft/raft_test.go**. In order to run these tests, do the following steps\:_
+
+1.  To run a particular test execute the following command from the main project directory
+    ```sh
+    go test -timeout 30s -v -run ^[Test Name]$ raft-consensus/raft
+    ```
+2.  To run the entire test suite run the following command from the main project directory
+    ```sh
+    go test -v raft-consensus/raft
+    ```
+
+![test1](images/test1.png)
+![test2](images/test2.png)
+
+### Visualizing Test Results
+
+_The **utils** directory provides functionalities to cleanly visualize the test logs in the form of a timing diagram table. To visualize the test logs follow the steps below\:_
+
+1. [**_Important_**] Ensure that the DEBUG level is set to 1 in **raft/raft.go**
+
+   ```sh
+   const DEBUG = 1
+   ```
+
+2. Run a test and save its logs in the utils directory (execute from root project folder `raft-consensus`).
+   ```sh
+   go test -timeout 30s -v -run ^[Test Name]$ raft-consensus/raft > utils/logs.txt
+   ```
+3. Use the logs to generate the timing diagram using the **utils/viz.go** file (This is to be executed from inside the `utils` directory)
+   ```sh
+   cd utils
+   go run viz.go < logs.txt > output.txt
+   ```
+
+Alternatively, you can use the following command to generate the timing diagram from the logs
+
+1. [**_Important_**] Ensure that the DEBUG level is set to 1 in **raft/raft.go**
+   ```sh
+   const DEBUG = 1
+   ```
+2. Run the following command from inside the `utils` directory
+   ```sh
+   ./visualize.sh -t <test_name>
+   ```
+
+- In both cases, the output will be saved in the `utils` directory as `output.txt`
+- A sample log file and output file is provided in the `utils` directory.
+
+![timing](images/timing.png)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -255,9 +378,11 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
-
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
+| Name               | Roll No.  | Email                        |
+| ------------------ | --------- | ---------------------------- |
+| Debajyoti Dasgupta | 18CS30051 | debajyotidasgupta6@gmail.com |
+| Somnath Jena       | 18CS30047 | somnathjena.2011@gmail.com   |
+| Sagnik Roy         | 18CS10063 | sagnikr38@gmail.com          |
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -265,32 +390,28 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 
 ## Acknowledgments
 
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
+List of resources we found helpful and we would like to give them some credits.
 
-- [Choose an Open Source License](https://choosealicense.com)
-- [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-- [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-- [Malven's Grid Cheatsheet](https://grid.malven.co/)
-- [Img Shields](https://shields.io)
-- [GitHub Pages](https://pages.github.com)
-- [Font Awesome](https://fontawesome.com)
-- [React Icons](https://react-icons.github.io/react-icons/search)
+- [The Raft Consensus Algorithm](https://raft.github.io/)
+- [In Search of an Understandable Consensus Algorithm](https://raft.github.io/raft.pdf)
+- [You Must Build A Raft](https://www.youtube.com/watch?v=Hm_m4MIXn9Q)
+- [Practical Distributed Consensus using HashiCorp/raft](https://www.youtube.com/watch?v=EGRmmxVFOfE)
+- [Lecture Notes CS60002](https://cse.iitkgp.ac.in/~sandipc/courses/cs60002/cs60002.html)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
-[stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/othneildrew/Best-README-Template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/debajyotidasgupta/raft-consensus?style=for-the-badge
+[contributors-url]: https://github.com/debajyotidasgupta/raft-consensus/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/debajyotidasgupta/raft-consensus?style=for-the-badge
+[forks-url]: https://github.com/debajyotidasgupta/raft-consensus/network/members
+[stars-shield]: https://img.shields.io/github/stars/debajyotidasgupta/raft-consensus?style=for-the-badge
+[stars-url]: https://github.com/debajyotidasgupta/raft-consensus/stargazers
+[issues-shield]: https://img.shields.io/github/issues/debajyotidasgupta/raft-consensus?style=for-the-badge
+[issues-url]: https://github.com/debajyotidasgupta/raft-consensus/issues
+[license-shield]: https://img.shields.io/github/license/debajyotidasgupta/raft-consensus?style=for-the-badge
+[license-url]: https://github.com/debajyotidasgupta/raft-consensus/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
-[product-screenshot]: images/screenshot.png
+[linkedin-url]: https://www.linkedin.com/in/debajyoti-dasgupta/
