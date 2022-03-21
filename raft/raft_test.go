@@ -384,6 +384,8 @@ func TestElectionFollowerDisconnectReconnectAfterLongCommitDone(t *testing.T) {
 }
 
 func TestTryCommitToNonLeader(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 100*time.Millisecond)()
+
 	cs := CreateNewCluster(t, 3)
 	defer cs.Shutdown()
 
