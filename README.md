@@ -310,6 +310,8 @@ _To interact with the system from the console, do the following steps\:_
     ```
 3.  You will be presented with a menu with necessary commands to create raft cluster, send commands, etc.
 
+> **NOTE:** While using the features like set value, get value etc., that should pass through the leader node, you can user the 9th menu and find the leader and then send the request to leader node. Sending a such a request to a non leader node will lead to failure. This implementation is in accordance with the official Raft Implementation from the paper.
+
 ### Running tests
 
 _A comprehensive set of tests has been provided in **raft/raft_test.go**. In order to run these tests, do the following steps\:_
