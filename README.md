@@ -32,7 +32,7 @@
     <img src="./images/logo.png" alt="Logo">
   </a>
 
-  <h3 align="center">Raf Consensus</h3>
+  <h3 align="center">Raft Consensus</h3>
 
   <p align="center">
     A prototype for demonstrating the raft consensus algorithm.
