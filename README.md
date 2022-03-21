@@ -80,7 +80,7 @@
 
 ![Screen Shot](images/overall.png)
 
-This project demonstrates the implementation of the `Raft Consensus algorithm` which is a consensus bases protocol for distributed systems. This project is built as a part of the course `CS60002` **_Distributed Systems_** at Indian Institute of Technology, Kharagpur. This project implements a simple version of the raft protocol, which can be used as a base template to build your own distributed system by adding features. Following are the core features implemented in this projects:
+This project demonstrates the implementation of the `Raft Consensus algorithm` which is a consensus based protocol for distributed systems. This project is built as a part of the course `CS60002` **_Distributed Systems_** at Indian Institute of Technology, Kharagpur. This project implements a simple version of the raft protocol, which can be used as a base template to build your own distributed system by adding features. Following are the core features implemented in this projects:
 
 - Raft Consensus RPCs
   - `RequestVote` RPC
@@ -103,7 +103,7 @@ A single client interface was built mainly because this is a simple working prot
 
 ### Built With
 
-Following mentioned are the major frameworks/libraries used to bootstrap this project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
+Following mentioned are the major frameworks/libraries used to bootstrap this project. Also included are the dependencies and addons used in this project.
 
 - [Golang](https://go.dev/)
   - [Leak Test](github.com/fortytw2/leaktest) - _Required for memory leak testing_
