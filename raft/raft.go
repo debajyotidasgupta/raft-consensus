@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const DEBUG = 0  // DEBUG is the debug level
+const DEBUG = 1  // DEBUG is the debug level
 type RNState int // RNState is the state of the Raft node
 
 const (
