@@ -375,7 +375,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Acknowledgments
 
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
+List of resources we found helpful and we would like to give them some credits.
 
 - [The Raft Consensus Algorithm](https://raft.github.io/)
 - [In Search of an Understandable Consensus Algorithm](https://raft.github.io/raft.pdf)
