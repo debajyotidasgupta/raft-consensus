@@ -331,11 +331,10 @@ _A comprehensive set of tests has been provided in **raft/raft_test.go**. In ord
 _The **utils** directory provides functionalities to cleanly visualize the test logs in the form of a timing diagram table. To visualize the test logs follow the steps below\:_
 
 1. [**_Important_**] Ensure that the DEBUG level is set to 1 in **raft/raft.go**
+
    ```sh
    const DEBUG = 1
    ```
-
-````
 
 2. Run a test and save its logs in the utils directory (execute from root project folder `raft-consensus`).
    ```sh
@@ -414,4 +413,7 @@ List of resources we found helpful and we would like to give them some credits.
 [license-url]: https://github.com/debajyotidasgupta/raft-consensus/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/debajyoti-dasgupta/
-````
+
+```
+
+```
