@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"raft-consensus/raft"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 //USER COMMANDS                 ARGUMENTS
@@ -257,6 +259,16 @@ func main() {
 	var input string
 	var cluster *raft.ClusterSimulator = nil
 	var peers int = 0
+
+	sigCh := make(chan os.Signal)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	go func() {
+		<-sigCh
+		fmt.Println("SIGNAL RECEIVED")
+		Stop(cluster)
+		os.Exit(0)
+	}()
 
 	gob.Register(raft.Write{})
 	gob.Register(raft.Read{})
